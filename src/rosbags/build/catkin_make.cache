@@ -1,0 +1,2 @@
+pcl_segment:perception_pcl/pcl_conversions:perception_pcl/pcl_ros:perception_pcl/perception_pcl
+-DCATKIN_DEVEL_PREFIX=/home/alberto/workspaces/workspace14diciembre/devel -DCMAKE_INSTALL_PREFIX=/home/alberto/workspaces/workspace14diciembre/install -G Unix Makefiles

@@ -1,0 +1,8 @@
+prefix=/home/alberto/workspaces/workspace14diciembre/install
+
+Name: segmentation
+Description: Description of segmentation
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/alberto/workspaces/workspace14diciembre/install/lib 
+Requires: 

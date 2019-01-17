@@ -1,0 +1,3 @@
+<launch>
+  <rosparam command="load" file="$(find workspace14diciembre)/params.yaml"/>
+</launch>
