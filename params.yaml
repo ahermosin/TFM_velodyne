@@ -10,12 +10,12 @@ up_lim_z: 1.5
 do_downsampling: false
 leaf_size: 0.1
 
-clusterTolerance: 0.60
+clusterTolerance: 0.6
 clusterMinSize: 20
-clusterMaxSize: 300
-
+clusterMaxSize: 200
+KSearch: 200
 NormalDistanceWeight: 10.8
-MaxIterationsFit: 10000
-DistanceThresholdFit: 0.2
+MaxIterationsFit: 1000
+DistanceThresholdFit: 0.026
 minRadius: 0.01
-maxRadius: 0.06
+maxRadius: 0.05

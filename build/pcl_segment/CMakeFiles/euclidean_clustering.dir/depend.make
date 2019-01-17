@@ -4,6 +4,7 @@
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /home/alberto/workspaces/workspace14diciembre/src/pcl_segment/euclidean_clustering.cpp
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/geometry_msgs/Point.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/geometry_msgs/Pose.h
+pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/geometry_msgs/PoseArray.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/geometry_msgs/PoseStamped.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/geometry_msgs/Quaternion.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/pcl_conversions/pcl_conversions.h

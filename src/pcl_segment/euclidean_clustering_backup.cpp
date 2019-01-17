@@ -19,25 +19,60 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <boost/foreach.hpp>
 #include "sensor_msgs/PointCloud2.h"
-#include "std_msgs/Header.h"
 #include "geometry_msgs/PoseStamped.h"
-#include "geometry_msgs/Pose.h"
-#include <geometry_msgs/PoseArray.h>
 #include "pcl_conversions/pcl_conversions.h"
 #include <stdexcept>
 
-geometry_msgs::PoseArray mensaje;
+//ros::NodeHandle nh;
+geometry_msgs::PoseStamped mensaje;
+geometry_msgs::PoseStamped mensaje_aux;
   
 void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publicando el /izq/velodyne_points para que la callback lo detecte
 {
+  std::cout << "llega" << endl;
+	sensor_msgs::PointCloud2::Ptr clusters (new sensor_msgs::PointCloud2);	
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::fromROSMsg(*input, *cloud); // Con esto ya tengo la nube de puntos de los mensajes en el puntero cloud
+  /*
+    mensaje.pose.position.x= (rand()%5);
+    mensaje.pose.position.y= (rand()%5);
+    mensaje.pose.position.z= 0.0;
+    mensaje.pose.orientation.x= 0.0;
+    mensaje.pose.orientation.y= 0.0;
+    mensaje.pose.orientation.z= 1.0;
+    mensaje.pose.orientation.w= 1.0;
+    mensaje.header.frame_id= "base_link";
+    */
+    
+    std::cout << "mensaje: " << mensaje << endl;
+    
+    
+}
+
+
+
+int 
+main (int argc, char** argv)
+{
   clock_t t;
   t = clock();
-	sensor_msgs::PointCloud2::Ptr clusters (new sensor_msgs::PointCloud2);	
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>), cloud_cropped (new pcl::PointCloud<pcl::PointXYZ>), cloud_downsampled (new pcl::PointCloud<pcl::PointXYZ>);
-	pcl::fromROSMsg(*input, *cloud); // The ROS message, given as sensor_msgs::PointCloud2ConstPtr is translated to PCL type pcl::PointCloud<pcl::PointXYZ>::Ptr
-    
-  std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl;
+  ros::init(argc, argv, "euclidean_clustering");
+  ros::NodeHandle nh; 
+  ros::Subscriber sub = nh.subscribe ("izq/velodyne_points", 1, callback);
+  ros::Publisher chatter_pub = nh.advertise<geometry_msgs::PoseStamped>("chatter", 1000);
+  srand (time(NULL));
   
+  // Read in the cloud data
+  pcl::PCDReader reader;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>), cloud_cropped (new pcl::PointCloud<pcl::PointXYZ>), cloud_downsampled (new pcl::PointCloud<pcl::PointXYZ>);
+  
+  XmlRpc::XmlRpcValue cloud_filename;
+  ros::param::get("cloud_filename", cloud_filename);
+  reader.read (cloud_filename, *cloud);
+  std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl; //*
+  
+
+
 //                                                                      INPUT CLOUD
 //                                                                           |
 //                                                                           |
@@ -50,7 +85,8 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
 //                                                                           V
 ///////////////////////////////////////////////////////////////////      CROPPING
 
-// The passthrough filter provided does not allow multiple-condition constraints
+
+// El filtro incluido en la librería filters/passthrough no permite múltiples condiciones simultáneas
 /*
   pcl::PassThrough<pcl::PointXYZ> pass;
   pass.setInputCloud (cloud);
@@ -66,7 +102,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
   pass.filter (*cloud_cropped);
 */
 
-// So it will be done manually
+// De manera que se hace más manual
   float low_lim_x, low_lim_y, low_lim_z, up_lim_x, up_lim_y, up_lim_z;
   ros::param::get("low_lim_x", low_lim_x);
   ros::param::get("low_lim_y", low_lim_y);
@@ -75,22 +111,26 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
   ros::param::get("up_lim_y", up_lim_y);
   ros::param::get("up_lim_z", up_lim_z);
   
-  // Remove the points within a cube of volume (up_lim_x - low_lim_x)m x (up_lim_y - low_lim_y)m x (up_lim_z - low_lim_z)m centered in the sensor. In order to avoid 6 comparations at a time it will be performed in three steps, saving efforts
+  //Eliminar los puntos dentro de un cubo de un volumen de (up_lim_x - low_lim_x)m x (up_lim_y - low_lim_y)m x (up_lim_z - low_lim_z)m centrado en el sensor
   int k;
-  for(k=0; k<=cloud->points.size(); k++)
+  for(k=0; k<=cloud->points.size(); k++) // Para no hacer 6 comparaciones en una línea se separa en tres pasos, así se podrían ahorrar algunas
   {
     if(cloud->points[k].x<low_lim_x || cloud->points[k].x>up_lim_x)
-      cloud_cropped->points.push_back (cloud->points[k]);
+      cloud_cropped->points.push_back (cloud->points[k]); //*
     else if(cloud->points[k].y<low_lim_y || cloud->points[k].y>up_lim_y)
-      cloud_cropped->points.push_back (cloud->points[k]);
+      cloud_cropped->points.push_back (cloud->points[k]); //*
     else if(cloud->points[k].z<low_lim_z || cloud->points[k].z>up_lim_z)
-      cloud_cropped->points.push_back (cloud->points[k]);
+      cloud_cropped->points.push_back (cloud->points[k]); //*
   }
   
+  pcl::PCDWriter writer;
   cloud_cropped->width = cloud_cropped->points.size ();
   cloud_cropped->height = 1;
   cloud_cropped->is_dense = true;
   std::cerr << "PointCloud after crop has: " << cloud_cropped->points.size () << " data points." << std::endl;
+  std::stringstream ss;
+  ss << "cloud_cropped.pcd";
+  //writer.write<pcl::PointXYZ> (ss.str (), *cloud_cropped, false);
 
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -137,7 +177,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
 //                                                                           |
 //                                                                           |
 //                                                                           V
-//////////////////////////////////////////////////////////////     POINT NORMALS ESTIMATION
+//////////////////////////////////////////////////////////////     POINT NORMAL ESTIMATION
   pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);
   pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
   pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> segNorm; 
@@ -152,17 +192,20 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
   ne.setInputCloud (cloud_downsampled);
   ne.setKSearch (200);
   ne.compute (*cloud_normals);
-//                                                                 POINT NORMALS ESTIMATED
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           V
-///////////////////////////////////////////////////////////////////  GROUND EXTRACTION                                                                 
+//////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                 
 
   // Create the segmentation object for the planar model and set all the parameters
   segNorm.setOptimizeCoefficients (true);
@@ -183,17 +226,56 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
   extract.setNegative (true);
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_NoGround (new pcl::PointCloud<pcl::PointXYZ> ());
   extract.filter (*cloud_NoGround);
-//                                                                 CLOUD WITHOUT GROUND
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           V
-///////////////////////////////////////////////////////////////////EUCLIDEAN CLUSTERING
+  
+  
+  
+  
+  
+  
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
+  viewer->setBackgroundColor (0, 0, 0);
+  viewer->addPointCloud<pcl::PointXYZ> (cloud, "sample cloud");
+  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "sample cloud");
+  viewer->addCoordinateSystem (1.0);
+  viewer->initCameraParameters ();
+  viewer->setCameraPosition (0.0, 0.0, 20.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0);
+    
+  pcl::ModelCoefficients coeffs;
+  coeffs.values.push_back (coefficients_plane->values[0]);
+  coeffs.values.push_back (coefficients_plane->values[1]);
+  coeffs.values.push_back (coefficients_plane->values[2]);
+  coeffs.values.push_back (coefficients_plane->values[3]);
+  viewer->addPlane (coeffs, "plane");
+  
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer2 (new pcl::visualization::PCLVisualizer ("3D Viewer cropped"));
+  viewer2->setBackgroundColor (0, 0, 0);
+  viewer2->addPointCloud<pcl::PointXYZ> (cloud_cropped, "sample cloud 2");
+  viewer2->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "sample cloud 2");
+  viewer2->addCoordinateSystem (1.0);
+  viewer2->initCameraParameters ();
+  viewer2->setCameraPosition (0.0, 0.0, 20.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0);
+  
+  
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer3 (new pcl::visualization::PCLVisualizer ("3D Viewer downsampled"));
+  if (do_downsampling)
+  {
+    viewer3->setBackgroundColor (0, 0, 0);
+    viewer3->addPointCloud<pcl::PointXYZ> (cloud_downsampled, "sample cloud 3");
+    viewer3->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "sample cloud 3");
+    viewer3->addCoordinateSystem (1.0);
+    viewer3->initCameraParameters ();
+    viewer3->setCameraPosition (0.0, 0.0, 20.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0);
+  }
+
+
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer_NoGround (new pcl::visualization::PCLVisualizer ("3D Viewer no ground"));
+  viewer_NoGround->setBackgroundColor (0, 0, 0);
+  viewer_NoGround->addPointCloud<pcl::PointXYZ> (cloud_NoGround, "sample cloud no ground");
+  viewer_NoGround->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "sample cloud no ground");
+  viewer_NoGround->addCoordinateSystem (1.0);
+  viewer_NoGround->initCameraParameters ();
+  viewer_NoGround->setCameraPosition (0.0, 0.0, 20.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0);
+  
 
   // Creating the KdTree object for the search method of the extraction
   pcl::search::KdTree<pcl::PointXYZ>::Ptr treeSeg (new pcl::search::KdTree<pcl::PointXYZ>);
@@ -212,40 +294,56 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
   ec.setMaxClusterSize (clusterMaxSize);
   ec.setSearchMethod (treeSeg);
   ec.setInputCloud (cloud_NoGround);
-  ec.extract (cluster_indices); ///////////////////// "VECTOR OF POINT CLOUDS (std::vector<pcl::PointIndices>)" (DESCRIPTION BELOW)
+  ec.extract (cluster_indices); ///////////////////// "VECTOR DE NUBES DE PUNTOS" (DESCRIPCIÓN A CONTINUACIÓN)
   
-  /*********************************************************KEY**********************************************************************/
+  
+  /*********************************************************CLAVÍSIMO**********************************************************************/
   /* Here we are creating a vector of PointIndices, which contain the actual index information in a vector<int>. The indices of each detected cluster are saved here - please take note of the fact that cluster_indices is a vector containing one instance of PointIndices for each detected cluster. So cluster_indices[0] contains all indices of the first cluster in our point cloud.
   */
   /****************************************************************************************************************************************/
-
-//                                                              CLUSTERS (in cluster_indices)
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           |
-//                                                                           V
-///////////////////////////////////////////////////////////////////  CLUSTERS ANALYSIS
-
+    
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewerclusters (new pcl::visualization::PCLVisualizer ("3D Viewer clusters"));
+  viewerclusters->setBackgroundColor (0.0, 0.0, 0.0);
+  viewerclusters->addCoordinateSystem (1.0);
+  viewerclusters->initCameraParameters ();
+  viewerclusters->setCameraPosition (0.0, 0.0, 20.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0);
+  
+  
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewervert_elem (new pcl::visualization::PCLVisualizer ("3D Viewer vertical elements"));
+  viewervert_elem->setBackgroundColor (0.0, 0.0, 0.0);
+  viewervert_elem->addPointCloud<pcl::PointXYZ> (cloud, "sample cloud vert");
+  viewervert_elem->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "sample cloud vert");
+  viewervert_elem->addCoordinateSystem (1.0);
+  viewervert_elem->initCameraParameters ();
+  viewervert_elem->setCameraPosition (0.0, 0.0, 20.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0);
+  
+  float color_r, color_g, color_b;
   int j = 0;
   int n = 0;
-       
-  geometry_msgs::PoseArray mensaje_aux;
   
-  // Each for-iteration means analysing one point cloud at a time, considered as a cluster according to the previous stage. The whole analysis of each cluster will be performed within the for-loop. We're iterating through cluster_indices.
+     //   std::cout << "debug1" << endl;
+        
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
     for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
-      cloud_cluster->points.push_back (cloud_NoGround->points[*pit]);
+      cloud_cluster->points.push_back (cloud_NoGround->points[*pit]); //*
       
+      //        std::cout << "debug1b" << endl;
     cloud_cluster->width = cloud_cluster->points.size ();
     cloud_cluster->height = 1;
     cloud_cluster->is_dense = true;
+
+    //std::cout << "PointCloud representing the Cluster " << j << ": " << cloud_cluster->points.size () << " data points." << std::endl;
+    std::stringstream ss;
+    ss << "cloud_cluster_" << j << ".pcd";
+    //writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false);
+    viewerclusters->addPointCloud<pcl::PointXYZ> (cloud_cluster, ss.str ());
+    color_r= (rand()%5)/10.0 + 0.6;
+    color_g= (rand()%5)/10.0 + 0.6;
+    color_b= (rand()%5)/10.0 + 0.6;
+    
+    viewerclusters->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, color_r, color_g, color_b, ss.str ());
 
       
     /************************************************************************************************************************************************************************/
@@ -256,12 +354,14 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
     pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> seg;
     pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ> ());
     pcl::PointCloud<pcl::Normal>::Ptr cloud_normals_cluster (new pcl::PointCloud<pcl::Normal>);
-            
+    //pcl::ModelCoefficients::Ptr coefficients_line (new pcl::ModelCoefficients), coefficients_cylinder (new pcl::ModelCoefficients);
+          //  std::cout << "debug1c" << endl;
+    //coefficients_cylinder->values[0] = 0;
+    //coefficients_cylinder->values[1] = 0;
+          //  std::cout << "debug1d" << endl;
     ne.setSearchMethod (tree);
     ne.setInputCloud (cloud_cluster);
-    float KSearch;
-    ros::param::get("KSearch", KSearch);
-    ne.setKSearch (KSearch);
+    ne.setKSearch (200);
     ne.compute (*cloud_normals_cluster);
     
     seg.setOptimizeCoefficients (true);
@@ -286,9 +386,18 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
     {
       std::cout << "Line coefficients: " << *coefficients_line << std::endl;
       //std::cout << "Possible vertical element found at" << endl;
-      //std::cout << "x: " << coefficients_line->values[0] << " y: " << coefficients_line->values[1] << endl;
+      std::cout << "x: " << coefficients_line->values[0] << " y: " << coefficients_line->values[1] << endl;
       
-      ///////////////////////////////////////////////////////////////FILTRO CILINDRO/////////////////////////////////////////////////////////
+      float distance;
+      //distance = sqrt(pow(coefficients_line->values[0],2) + pow(coefficients_line->values[1],2));
+      
+      //std::cout << "Distance to element: " << distance << endl;
+      
+      
+      
+      
+      
+      ///////////////////////////////////////////////////////////////EN PRUEBAS/////////////////////////////////////////////////////////
       //Una vez detectado como línea vertical se comprueba si tiene propiedades de cilindro de hasta cierto tamaño
       seg.setModelType (pcl::SACMODEL_CYLINDER);
       seg.setMethodType (pcl::SAC_RANSAC);
@@ -298,30 +407,51 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
       ros::param::get("minRadius", minRadius);
       ros::param::get("maxRadius", maxRadius);
       seg.setRadiusLimits (minRadius, maxRadius);
-        
-      seg.segment (*inliers_cylinder, *coefficients_cylinder);
+
+      // Obtain the cylinder inliers and coefficients
       
-      if(coefficients_cylinder->values.size() != 0)
-      {     
-        std::cout << "***************************Cylinder coefficients: " << *coefficients_cylinder << std::endl;
-        //std::cout << "Possible vertical element found at" << endl;
-        //std::cout << "x: " << coefficients_cylinder->values[0] << " y: " << coefficients_cylinder->values[1] << endl;
-        //distance = sqrt(pow(coefficients_cylinder->values[0],2) + pow(coefficients_cylinder->values[1],2));
-        //std::cout << "Distance to element: " << distance << endl;
-        geometry_msgs::Pose pose;
-        pose.position.x = coefficients_line->values[0];
-        pose.position.y = coefficients_line->values[1];
-        pose.position.z = coefficients_line->values[2] - coefficients_plane->values[3]; // Approximation
-        pose.orientation.x = coefficients_line->values[3];
-        pose.orientation.y = coefficients_line->values[4];
-        pose.orientation.z = coefficients_line->values[5];
-        pose.orientation.w = 0.0;
-        mensaje_aux.poses.push_back(pose);
-        n++;
-      }
-      mensaje_aux.header.frame_id = "velodyne_i";
-      mensaje = mensaje_aux;
+      
+        //std::cout << "debug2" << endl;
+        
+        seg.segment (*inliers_cylinder, *coefficients_cylinder);
+        if(coefficients_cylinder->values.size() == 0)
+          std::cout << "Fallo" << std::endl;
+        else
+        {
+        //std::cout << "debug3" << endl;
+        
+          //        std::cout << "debug4" << endl;
+            //    std::cout << "debug5" << endl;
+          std::cout << "***************************Cylinder coefficients: " << *coefficients_cylinder << std::endl;
+          std::cout << "Possible vertical element found at" << endl;
+          std::cout << "x: " << coefficients_cylinder->values[0] << " y: " << coefficients_cylinder->values[1] << endl;
+             //     std::cout << "debug6" << endl;
+          distance = sqrt(pow(coefficients_cylinder->values[0],2) + pow(coefficients_cylinder->values[1],2));
+              //    std::cout << "debug7" << endl;
+          std::cout << "Distance to element: " << distance << endl;
+          ///////////////////////////////////////////////////////////////EN PRUEBAS/////////////////////////////////////////////////////////
+              //    std::cout << "debug7" << endl;
           
+          
+          
+          
+          ss << "cloud_vert_elem_" << j << ".pcd";
+          //writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false);
+          viewervert_elem->addPointCloud<pcl::PointXYZ> (cloud_cluster, ss.str ());
+          /*
+          color_r= (rand()%5)/10.0 + 0.6;
+          color_g= (rand()%5)/10.0 + 0.6;
+          color_b= (rand()%5)/10.0 + 0.6;
+          */
+          color_r= 1.0;
+          color_g= 0.0;
+          color_b= 0.0;
+                //  std::cout << "debug8" << endl;
+          viewervert_elem->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, color_r, color_g, color_b, ss.str ());
+          viewervert_elem->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, ss.str ());
+          n++;
+          }
+             //  std::cout << "debug9" << endl;
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -333,25 +463,19 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
   std::cout << n << " clusters have been identified as vertical elements" << std::endl;
 
   std::cout << "Calculated in " << 1000.0*((float)t)/CLOCKS_PER_SEC << " milliseconds" << std::endl;
-  t = t - clock();
-}
 
-
-
-int 
-main (int argc, char** argv)
-{
-  ros::init(argc, argv, "euclidean_clustering");
-  ros::NodeHandle nh; 
-  ros::Subscriber sub = nh.subscribe ("izq/velodyne_points", 1, callback);
-  ros::Publisher chatter_pub = nh.advertise<geometry_msgs::PoseArray>("chatter", 1000);
-  
   while (ros::ok())
   {
-    ros::spinOnce();
     chatter_pub.publish(mensaje);
-    std::cout << "mensaje: " << mensaje << endl;
-    //boost::this_thread::sleep (boost::posix_time::microseconds (10000));
+    ros::spinOnce();
+    viewer->spinOnce (100);
+    viewer2->spinOnce (100);
+    viewer3->spinOnce (100);
+    viewer_NoGround->spinOnce (100);
+    viewerclusters->spinOnce (100);
+    viewervert_elem->spinOnce (100);
+    boost::this_thread::sleep (boost::posix_time::microseconds (100000));
   }
+  
   return(0);
 }
