@@ -1,5 +1,3 @@
-cloud_filename: "src/rosbags/rosbagtopcd/pcl555.pcd"
-
 low_lim_x: -1.5
 low_lim_y: -1.5
 low_lim_z: -1.5
@@ -7,15 +5,22 @@ up_lim_x: 1.5
 up_lim_y: 1.5
 up_lim_z: 1.5
 
-do_downsampling: false
+do_downsampling: true
 leaf_size: 0.1
 
-clusterTolerance: 0.6
-clusterMinSize: 20
-clusterMaxSize: 200
-KSearch: 200
-NormalDistanceWeight: 10.8
-MaxIterationsFit: 1000
-DistanceThresholdFit: 0.026
+KSearchPlane: 15
+
+qx: 0.5
+qy: 0.5
+qz: 0.5
+qw: -0.5
+
+clusterTolerance: 0.8
+clusterMinSize: 10
+clusterMaxSize: 100
+KSearch: 20
+NormalDistanceWeight: 1.8
+MaxIterationsFit: 50
+DistanceThresholdFit: 0.05
 minRadius: 0.01
-maxRadius: 0.05
+maxRadius: 0.15

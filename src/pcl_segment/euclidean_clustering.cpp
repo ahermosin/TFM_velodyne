@@ -30,12 +30,11 @@ geometry_msgs::PoseArray mensaje;
   
 void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publicando el /izq/velodyne_points para que la callback lo detecte
 {
-  clock_t t;
-  t = clock();
+  clock_t t_start, t_end, t_aux1, t_aux2;
+  t_start = clock();
 	sensor_msgs::PointCloud2::Ptr clusters (new sensor_msgs::PointCloud2);	
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>), cloud_cropped (new pcl::PointCloud<pcl::PointXYZ>), cloud_downsampled (new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::fromROSMsg(*input, *cloud); // The ROS message, given as sensor_msgs::PointCloud2ConstPtr is translated to PCL type pcl::PointCloud<pcl::PointXYZ>::Ptr
-    
   std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl;
   
 //                                                                      INPUT CLOUD
@@ -92,7 +91,6 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
   cloud_cropped->is_dense = true;
   std::cerr << "PointCloud after crop has: " << cloud_cropped->points.size () << " data points." << std::endl;
 
-
 //////////////////////////////////////////////////////////////////////////////////////
 //                                                                     CLOUD CROPPED
 //                                                                           |
@@ -147,11 +145,16 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
   pcl::ModelCoefficients::Ptr coefficients_plane (new pcl::ModelCoefficients);
   pcl::ModelCoefficients::Ptr coefficients_line (new pcl::ModelCoefficients), coefficients_cylinder (new pcl::ModelCoefficients);
   pcl::PointIndices::Ptr inliers_plane (new pcl::PointIndices), inliers_line (new pcl::PointIndices), inliers_cylinder (new pcl::PointIndices);
-  
+ 
   ne.setSearchMethod (treePlane);
-  ne.setInputCloud (cloud_downsampled);
-  ne.setKSearch (200);
-  ne.compute (*cloud_normals);
+  ne.setInputCloud (cloud_downsampled); // ---------------------->>>>>>>> CON DOWNSAMPLING SE HACE DEL ORDEN DE 10 VECES MÁS RÁPIDO
+  float KSearchPlane;
+  ros::param::get("KSearchPlane", KSearchPlane);
+  ne.setKSearch (KSearchPlane); // ----------------------->>>>> CUANTO MÁS ALTO SEA KSearchPlane más lento es ne.compute
+                    t_aux1 = clock();
+  ne.compute (*cloud_normals); // ------------------->>>>> ~230-240 ms LEEEEEENTOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+                    t_aux2 = clock();
+  
 //                                                                 POINT NORMALS ESTIMATED
 //                                                                           |
 //                                                                           |
@@ -250,7 +253,8 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
       
     /************************************************************************************************************************************************************************/
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // En este punto, cada clúster que se va encontrando se analiza para ver si se puede representar como elemento vertical. Si el Fitting sale positivo, guardaremos únicamente las componentes 
+    // En este punto, cada clúster que se va encontrando se analiza para ver si se puede representar como elemento vertical. Si el Fitting sale positivo, guardaremos únicamente las componentes
+    // At this point, each cluster is analysed in order to  
          
     // Create the segmentation object for cylinder segmentation and set all the parameters
     pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> seg;
@@ -311,17 +315,42 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
         geometry_msgs::Pose pose;
         pose.position.x = coefficients_line->values[0];
         pose.position.y = coefficients_line->values[1];
-        pose.position.z = coefficients_line->values[2] - coefficients_plane->values[3]; // Approximation
-        pose.orientation.x = coefficients_line->values[3];
-        pose.orientation.y = coefficients_line->values[4];
-        pose.orientation.z = coefficients_line->values[5];
-        pose.orientation.w = 0.0;
+        pose.position.z = coefficients_line->values[2];
+        
+        float a1, b1, c1, a2, b2, c2, a3, b3, c3, norm;
+        a1 = 0;
+        b1 = 0;
+        c1 = 1;
+        a2 = coefficients_line->values[3];
+        b2 = coefficients_line->values[4];
+        c2 = coefficients_line->values[5];
+        
+        a3 = a1+a2;
+        b3 = b1+b2;
+        c3 = c1+c2;
+        
+        pose.orientation.w = a1*a3 + b1*b3 + c1*c3;
+        
+        
+        pose.orientation.x = b1*c3 - b3*c1;
+        pose.orientation.y = a3*c1 - a1*c3;
+        pose.orientation.z = a1*b3 - a3*b1;
+        
+        norm = sqrt(pose.orientation.x*pose.orientation.x + pose.orientation.y*pose.orientation.y + pose.orientation.z*pose.orientation.z + pose.orientation.w*pose.orientation.w);
+        
+        float qx, qy, qz, qw;
+        ros::param::get("qx", qx);
+        ros::param::get("qy", qy);
+        ros::param::get("qz", qz);
+        ros::param::get("qw", qw);
+        pose.orientation.x = qx;
+        pose.orientation.y = qy;
+        pose.orientation.z = qz;
+        pose.orientation.w = qw;
+        
         mensaje_aux.poses.push_back(pose);
         n++;
-      }
-      mensaje_aux.header.frame_id = "velodyne_i";
-      mensaje = mensaje_aux;
-          
+      } 
     }
     
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -329,11 +358,17 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
     
     j++;
   }
+  
+  mensaje_aux.header.frame_id = "velodyne_i";
+  mensaje = mensaje_aux;
+  
   std::cout << j+1 << " clusters found" << std::endl;
   std::cout << n << " clusters have been identified as vertical elements" << std::endl;
-
-  std::cout << "Calculated in " << 1000.0*((float)t)/CLOCKS_PER_SEC << " milliseconds" << std::endl;
-  t = t - clock();
+  
+  t_end = clock();
+  std::cout << "Calculated in " << 1000.0*((float)(t_end-t_start))/CLOCKS_PER_SEC << " milliseconds" << std::endl;
+  std::cout << "Aux Calculated in " << 1000.0*((float)(t_aux2-t_aux1))/CLOCKS_PER_SEC << " milliseconds" << std::endl;
+  //t = t - clock();
 }
 
 
@@ -345,12 +380,14 @@ main (int argc, char** argv)
   ros::NodeHandle nh; 
   ros::Subscriber sub = nh.subscribe ("izq/velodyne_points", 1, callback);
   ros::Publisher chatter_pub = nh.advertise<geometry_msgs::PoseArray>("chatter", 1000);
+  ros::Rate loop_rate(10);
   
   while (ros::ok())
   {
     ros::spinOnce();
     chatter_pub.publish(mensaje);
     std::cout << "mensaje: " << mensaje << endl;
+    loop_rate.sleep();
     //boost::this_thread::sleep (boost::posix_time::microseconds (10000));
   }
   return(0);
