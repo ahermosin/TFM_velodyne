@@ -1,6 +1,6 @@
 # TFM_velodyne
 
-In this Master's Thesis there will be developed a node that implements an algorithm which can detect vertical elements in the environment. These elements are useful for self-location in autonomous vehicles, in case of the GPS signal malfunction, when they have been previously identified and positioned with respect an absolute reference frame.
+In this Master's Thesis there will be developed a node that implements an algorithm which can segment and detect vertical elements in the environment from point clouds. These elements are useful for self-location in autonomous vehicles, in case of the GPS signal malfunction, when they have been previously identified and positioned with respect an absolute reference frame.
 
 The way it will perform is by receiving information from sensor_msgs::PointCloud2 from a LiDAR's topic (or more) and analysing this information, returning the coordinates of the detected elements as well as their orientation.
 
