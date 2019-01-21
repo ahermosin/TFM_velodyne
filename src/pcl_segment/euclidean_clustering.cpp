@@ -1,6 +1,8 @@
 #include <ros/ros.h>
 #include <time.h>
 #include <math.h>
+#include <tf/tf.h>
+#include <tf/LinearMath/Quaternion.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/point_types.h>
@@ -316,37 +318,21 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
         pose.position.x = coefficients_line->values[0];
         pose.position.y = coefficients_line->values[1];
         pose.position.z = coefficients_line->values[2];
+                
+        tf::Vector3 axis_vector(coefficients_line->values[3], coefficients_line->values[4], coefficients_line->values[5]);
+
+        tf::Vector3 up_vector(1.0, 0.0, 0.0);
+        tf::Vector3 right_vector = axis_vector.cross(up_vector);
+        right_vector.normalized();
+        tf::Quaternion q(right_vector, -1.0*acos(axis_vector.dot(up_vector)));
+        q.normalize();
+        geometry_msgs::Quaternion cylinder_orientation;
+        tf::quaternionTFToMsg(q, cylinder_orientation);
         
-        float a1, b1, c1, a2, b2, c2, a3, b3, c3, norm;
-        a1 = 0;
-        b1 = 0;
-        c1 = 1;
-        a2 = coefficients_line->values[3];
-        b2 = coefficients_line->values[4];
-        c2 = coefficients_line->values[5];
-        
-        a3 = a1+a2;
-        b3 = b1+b2;
-        c3 = c1+c2;
-        
-        pose.orientation.w = a1*a3 + b1*b3 + c1*c3;
-        
-        
-        pose.orientation.x = b1*c3 - b3*c1;
-        pose.orientation.y = a3*c1 - a1*c3;
-        pose.orientation.z = a1*b3 - a3*b1;
-        
-        norm = sqrt(pose.orientation.x*pose.orientation.x + pose.orientation.y*pose.orientation.y + pose.orientation.z*pose.orientation.z + pose.orientation.w*pose.orientation.w);
-        
-        float qx, qy, qz, qw;
-        ros::param::get("qx", qx);
-        ros::param::get("qy", qy);
-        ros::param::get("qz", qz);
-        ros::param::get("qw", qw);
-        pose.orientation.x = qx;
-        pose.orientation.y = qy;
-        pose.orientation.z = qz;
-        pose.orientation.w = qw;
+        pose.orientation.x = cylinder_orientation.x;
+        pose.orientation.y = cylinder_orientation.y;
+        pose.orientation.z = cylinder_orientation.z;
+        pose.orientation.w = cylinder_orientation.w;
         
         mensaje_aux.poses.push_back(pose);
         n++;
