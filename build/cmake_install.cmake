@@ -123,9 +123,9 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
   include("/home/alberto/workspaces/workspace14diciembre/build/gtest/cmake_install.cmake")
   include("/home/alberto/workspaces/workspace14diciembre/build/perception_pcl/perception_pcl/cmake_install.cmake")
-  include("/home/alberto/workspaces/workspace14diciembre/build/pcl_segment/cmake_install.cmake")
   include("/home/alberto/workspaces/workspace14diciembre/build/perception_pcl/pcl_conversions/cmake_install.cmake")
   include("/home/alberto/workspaces/workspace14diciembre/build/perception_pcl/pcl_ros/cmake_install.cmake")
+  include("/home/alberto/workspaces/workspace14diciembre/build/pcl_segment/cmake_install.cmake")
 
 endif()
 

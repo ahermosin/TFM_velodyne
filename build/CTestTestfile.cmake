@@ -6,6 +6,6 @@
 # testing this directory and lists subdirectories to be tested as well.
 subdirs("gtest")
 subdirs("perception_pcl/perception_pcl")
-subdirs("pcl_segment")
 subdirs("perception_pcl/pcl_conversions")
 subdirs("perception_pcl/pcl_ros")
+subdirs("pcl_segment")

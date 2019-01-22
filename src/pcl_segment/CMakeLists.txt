@@ -11,6 +11,8 @@ find_package(PCL 1.2 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
+  tf
+  pcl_ros
 )
 
 
@@ -207,10 +209,7 @@ include_directories(
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-add_executable (scene_segment scene_segment.cpp)
 add_executable (euclidean_clustering euclidean_clustering.cpp)
-add_executable (pclview pclview.cpp)
-target_link_libraries (scene_segment ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+add_executable (pointcloud_merge pointcloud_merge.cpp)
 target_link_libraries (euclidean_clustering ${PCL_LIBRARIES} ${catkin_LIBRARIES})
-target_link_libraries (pclview ${PCL_LIBRARIES} ${catkin_LIBRARIES})
-
+target_link_libraries (pointcloud_merge ${PCL_LIBRARIES} ${catkin_LIBRARIES})

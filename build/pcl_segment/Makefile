@@ -68,6 +68,29 @@ install/strip/fast: preinstall/fast
 	/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
 .PHONY : install/strip/fast
 
+# Special rule for the target install
+install: preinstall
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
+	/usr/bin/cmake -P cmake_install.cmake
+.PHONY : install
+
+# Special rule for the target install
+install/fast: preinstall/fast
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
+	/usr/bin/cmake -P cmake_install.cmake
+.PHONY : install/fast
+
+# Special rule for the target edit_cache
+edit_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
+	/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+.PHONY : edit_cache
+
+# Special rule for the target edit_cache
+edit_cache/fast: edit_cache
+
+.PHONY : edit_cache/fast
+
 # Special rule for the target install/local
 install/local: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
@@ -79,17 +102,6 @@ install/local/fast: preinstall/fast
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
 	/usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
 .PHONY : install/local/fast
-
-# Special rule for the target rebuild_cache
-rebuild_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/usr/bin/cmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
-.PHONY : rebuild_cache
-
-# Special rule for the target rebuild_cache
-rebuild_cache/fast: rebuild_cache
-
-.PHONY : rebuild_cache/fast
 
 # Special rule for the target test
 test:
@@ -112,28 +124,16 @@ list_install_components/fast: list_install_components
 
 .PHONY : list_install_components/fast
 
-# Special rule for the target edit_cache
-edit_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
-	/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
-.PHONY : edit_cache
+# Special rule for the target rebuild_cache
+rebuild_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
+	/usr/bin/cmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+.PHONY : rebuild_cache
 
-# Special rule for the target edit_cache
-edit_cache/fast: edit_cache
+# Special rule for the target rebuild_cache
+rebuild_cache/fast: rebuild_cache
 
-.PHONY : edit_cache/fast
-
-# Special rule for the target install
-install: preinstall
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
-	/usr/bin/cmake -P cmake_install.cmake
-.PHONY : install
-
-# Special rule for the target install
-install/fast: preinstall/fast
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
-	/usr/bin/cmake -P cmake_install.cmake
-.PHONY : install/fast
+.PHONY : rebuild_cache/fast
 
 # The main all target
 all: cmake_check_build_system
@@ -168,214 +168,19 @@ depend:
 .PHONY : depend
 
 # Convenience name for target.
-pcl_segment/CMakeFiles/roscpp_generate_messages_py.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/roscpp_generate_messages_py.dir/rule
-.PHONY : pcl_segment/CMakeFiles/roscpp_generate_messages_py.dir/rule
+pcl_segment/CMakeFiles/pointcloud_merge.dir/rule:
+	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/pointcloud_merge.dir/rule
+.PHONY : pcl_segment/CMakeFiles/pointcloud_merge.dir/rule
 
 # Convenience name for target.
-roscpp_generate_messages_py: pcl_segment/CMakeFiles/roscpp_generate_messages_py.dir/rule
+pointcloud_merge: pcl_segment/CMakeFiles/pointcloud_merge.dir/rule
 
-.PHONY : roscpp_generate_messages_py
+.PHONY : pointcloud_merge
 
 # fast build rule for target.
-roscpp_generate_messages_py/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/roscpp_generate_messages_py.dir/build.make pcl_segment/CMakeFiles/roscpp_generate_messages_py.dir/build
-.PHONY : roscpp_generate_messages_py/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/roscpp_generate_messages_eus.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/roscpp_generate_messages_eus.dir/rule
-.PHONY : pcl_segment/CMakeFiles/roscpp_generate_messages_eus.dir/rule
-
-# Convenience name for target.
-roscpp_generate_messages_eus: pcl_segment/CMakeFiles/roscpp_generate_messages_eus.dir/rule
-
-.PHONY : roscpp_generate_messages_eus
-
-# fast build rule for target.
-roscpp_generate_messages_eus/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/roscpp_generate_messages_eus.dir/build.make pcl_segment/CMakeFiles/roscpp_generate_messages_eus.dir/build
-.PHONY : roscpp_generate_messages_eus/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/roscpp_generate_messages_lisp.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/roscpp_generate_messages_lisp.dir/rule
-.PHONY : pcl_segment/CMakeFiles/roscpp_generate_messages_lisp.dir/rule
-
-# Convenience name for target.
-roscpp_generate_messages_lisp: pcl_segment/CMakeFiles/roscpp_generate_messages_lisp.dir/rule
-
-.PHONY : roscpp_generate_messages_lisp
-
-# fast build rule for target.
-roscpp_generate_messages_lisp/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/roscpp_generate_messages_lisp.dir/build.make pcl_segment/CMakeFiles/roscpp_generate_messages_lisp.dir/build
-.PHONY : roscpp_generate_messages_lisp/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_cpp.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_cpp.dir/rule
-.PHONY : pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_cpp.dir/rule
-
-# Convenience name for target.
-rosgraph_msgs_generate_messages_cpp: pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_cpp.dir/rule
-
-.PHONY : rosgraph_msgs_generate_messages_cpp
-
-# fast build rule for target.
-rosgraph_msgs_generate_messages_cpp/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_cpp.dir/build.make pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_cpp.dir/build
-.PHONY : rosgraph_msgs_generate_messages_cpp/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/std_msgs_generate_messages_lisp.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/std_msgs_generate_messages_lisp.dir/rule
-.PHONY : pcl_segment/CMakeFiles/std_msgs_generate_messages_lisp.dir/rule
-
-# Convenience name for target.
-std_msgs_generate_messages_lisp: pcl_segment/CMakeFiles/std_msgs_generate_messages_lisp.dir/rule
-
-.PHONY : std_msgs_generate_messages_lisp
-
-# fast build rule for target.
-std_msgs_generate_messages_lisp/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/std_msgs_generate_messages_lisp.dir/build.make pcl_segment/CMakeFiles/std_msgs_generate_messages_lisp.dir/build
-.PHONY : std_msgs_generate_messages_lisp/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/roscpp_generate_messages_cpp.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/roscpp_generate_messages_cpp.dir/rule
-.PHONY : pcl_segment/CMakeFiles/roscpp_generate_messages_cpp.dir/rule
-
-# Convenience name for target.
-roscpp_generate_messages_cpp: pcl_segment/CMakeFiles/roscpp_generate_messages_cpp.dir/rule
-
-.PHONY : roscpp_generate_messages_cpp
-
-# fast build rule for target.
-roscpp_generate_messages_cpp/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/roscpp_generate_messages_cpp.dir/build.make pcl_segment/CMakeFiles/roscpp_generate_messages_cpp.dir/build
-.PHONY : roscpp_generate_messages_cpp/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_eus.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_eus.dir/rule
-.PHONY : pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_eus.dir/rule
-
-# Convenience name for target.
-rosgraph_msgs_generate_messages_eus: pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_eus.dir/rule
-
-.PHONY : rosgraph_msgs_generate_messages_eus
-
-# fast build rule for target.
-rosgraph_msgs_generate_messages_eus/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_eus.dir/build.make pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_eus.dir/build
-.PHONY : rosgraph_msgs_generate_messages_eus/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/rule
-.PHONY : pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/rule
-
-# Convenience name for target.
-rosgraph_msgs_generate_messages_lisp: pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/rule
-
-.PHONY : rosgraph_msgs_generate_messages_lisp
-
-# fast build rule for target.
-rosgraph_msgs_generate_messages_lisp/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/build.make pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_lisp.dir/build
-.PHONY : rosgraph_msgs_generate_messages_lisp/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/std_msgs_generate_messages_cpp.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/std_msgs_generate_messages_cpp.dir/rule
-.PHONY : pcl_segment/CMakeFiles/std_msgs_generate_messages_cpp.dir/rule
-
-# Convenience name for target.
-std_msgs_generate_messages_cpp: pcl_segment/CMakeFiles/std_msgs_generate_messages_cpp.dir/rule
-
-.PHONY : std_msgs_generate_messages_cpp
-
-# fast build rule for target.
-std_msgs_generate_messages_cpp/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/std_msgs_generate_messages_cpp.dir/build.make pcl_segment/CMakeFiles/std_msgs_generate_messages_cpp.dir/build
-.PHONY : std_msgs_generate_messages_cpp/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/rule
-.PHONY : pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/rule
-
-# Convenience name for target.
-rosgraph_msgs_generate_messages_nodejs: pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/rule
-
-.PHONY : rosgraph_msgs_generate_messages_nodejs
-
-# fast build rule for target.
-rosgraph_msgs_generate_messages_nodejs/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/build.make pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/build
-.PHONY : rosgraph_msgs_generate_messages_nodejs/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_py.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_py.dir/rule
-.PHONY : pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_py.dir/rule
-
-# Convenience name for target.
-rosgraph_msgs_generate_messages_py: pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_py.dir/rule
-
-.PHONY : rosgraph_msgs_generate_messages_py
-
-# fast build rule for target.
-rosgraph_msgs_generate_messages_py/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_py.dir/build.make pcl_segment/CMakeFiles/rosgraph_msgs_generate_messages_py.dir/build
-.PHONY : rosgraph_msgs_generate_messages_py/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/std_msgs_generate_messages_eus.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/std_msgs_generate_messages_eus.dir/rule
-.PHONY : pcl_segment/CMakeFiles/std_msgs_generate_messages_eus.dir/rule
-
-# Convenience name for target.
-std_msgs_generate_messages_eus: pcl_segment/CMakeFiles/std_msgs_generate_messages_eus.dir/rule
-
-.PHONY : std_msgs_generate_messages_eus
-
-# fast build rule for target.
-std_msgs_generate_messages_eus/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/std_msgs_generate_messages_eus.dir/build.make pcl_segment/CMakeFiles/std_msgs_generate_messages_eus.dir/build
-.PHONY : std_msgs_generate_messages_eus/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/scene_segment.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/scene_segment.dir/rule
-.PHONY : pcl_segment/CMakeFiles/scene_segment.dir/rule
-
-# Convenience name for target.
-scene_segment: pcl_segment/CMakeFiles/scene_segment.dir/rule
-
-.PHONY : scene_segment
-
-# fast build rule for target.
-scene_segment/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/scene_segment.dir/build.make pcl_segment/CMakeFiles/scene_segment.dir/build
-.PHONY : scene_segment/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/pclview.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/pclview.dir/rule
-.PHONY : pcl_segment/CMakeFiles/pclview.dir/rule
-
-# Convenience name for target.
-pclview: pcl_segment/CMakeFiles/pclview.dir/rule
-
-.PHONY : pclview
-
-# fast build rule for target.
-pclview/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/pclview.dir/build.make pcl_segment/CMakeFiles/pclview.dir/build
-.PHONY : pclview/fast
+pointcloud_merge/fast:
+	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/pointcloud_merge.dir/build.make pcl_segment/CMakeFiles/pointcloud_merge.dir/build
+.PHONY : pointcloud_merge/fast
 
 # Convenience name for target.
 pcl_segment/CMakeFiles/euclidean_clustering.dir/rule:
@@ -391,51 +196,6 @@ euclidean_clustering: pcl_segment/CMakeFiles/euclidean_clustering.dir/rule
 euclidean_clustering/fast:
 	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/euclidean_clustering.dir/build.make pcl_segment/CMakeFiles/euclidean_clustering.dir/build
 .PHONY : euclidean_clustering/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/std_msgs_generate_messages_nodejs.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/std_msgs_generate_messages_nodejs.dir/rule
-.PHONY : pcl_segment/CMakeFiles/std_msgs_generate_messages_nodejs.dir/rule
-
-# Convenience name for target.
-std_msgs_generate_messages_nodejs: pcl_segment/CMakeFiles/std_msgs_generate_messages_nodejs.dir/rule
-
-.PHONY : std_msgs_generate_messages_nodejs
-
-# fast build rule for target.
-std_msgs_generate_messages_nodejs/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/std_msgs_generate_messages_nodejs.dir/build.make pcl_segment/CMakeFiles/std_msgs_generate_messages_nodejs.dir/build
-.PHONY : std_msgs_generate_messages_nodejs/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/roscpp_generate_messages_nodejs.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/roscpp_generate_messages_nodejs.dir/rule
-.PHONY : pcl_segment/CMakeFiles/roscpp_generate_messages_nodejs.dir/rule
-
-# Convenience name for target.
-roscpp_generate_messages_nodejs: pcl_segment/CMakeFiles/roscpp_generate_messages_nodejs.dir/rule
-
-.PHONY : roscpp_generate_messages_nodejs
-
-# fast build rule for target.
-roscpp_generate_messages_nodejs/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/roscpp_generate_messages_nodejs.dir/build.make pcl_segment/CMakeFiles/roscpp_generate_messages_nodejs.dir/build
-.PHONY : roscpp_generate_messages_nodejs/fast
-
-# Convenience name for target.
-pcl_segment/CMakeFiles/std_msgs_generate_messages_py.dir/rule:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f CMakeFiles/Makefile2 pcl_segment/CMakeFiles/std_msgs_generate_messages_py.dir/rule
-.PHONY : pcl_segment/CMakeFiles/std_msgs_generate_messages_py.dir/rule
-
-# Convenience name for target.
-std_msgs_generate_messages_py: pcl_segment/CMakeFiles/std_msgs_generate_messages_py.dir/rule
-
-.PHONY : std_msgs_generate_messages_py
-
-# fast build rule for target.
-std_msgs_generate_messages_py/fast:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/std_msgs_generate_messages_py.dir/build.make pcl_segment/CMakeFiles/std_msgs_generate_messages_py.dir/build
-.PHONY : std_msgs_generate_messages_py/fast
 
 euclidean_clustering.o: euclidean_clustering.cpp.o
 
@@ -464,59 +224,32 @@ euclidean_clustering.cpp.s:
 	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/euclidean_clustering.dir/build.make pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.s
 .PHONY : euclidean_clustering.cpp.s
 
-pclview.o: pclview.cpp.o
+pointcloud_merge.o: pointcloud_merge.cpp.o
 
-.PHONY : pclview.o
-
-# target to build an object file
-pclview.cpp.o:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/pclview.dir/build.make pcl_segment/CMakeFiles/pclview.dir/pclview.cpp.o
-.PHONY : pclview.cpp.o
-
-pclview.i: pclview.cpp.i
-
-.PHONY : pclview.i
-
-# target to preprocess a source file
-pclview.cpp.i:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/pclview.dir/build.make pcl_segment/CMakeFiles/pclview.dir/pclview.cpp.i
-.PHONY : pclview.cpp.i
-
-pclview.s: pclview.cpp.s
-
-.PHONY : pclview.s
-
-# target to generate assembly for a file
-pclview.cpp.s:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/pclview.dir/build.make pcl_segment/CMakeFiles/pclview.dir/pclview.cpp.s
-.PHONY : pclview.cpp.s
-
-scene_segment.o: scene_segment.cpp.o
-
-.PHONY : scene_segment.o
+.PHONY : pointcloud_merge.o
 
 # target to build an object file
-scene_segment.cpp.o:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/scene_segment.dir/build.make pcl_segment/CMakeFiles/scene_segment.dir/scene_segment.cpp.o
-.PHONY : scene_segment.cpp.o
+pointcloud_merge.cpp.o:
+	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/pointcloud_merge.dir/build.make pcl_segment/CMakeFiles/pointcloud_merge.dir/pointcloud_merge.cpp.o
+.PHONY : pointcloud_merge.cpp.o
 
-scene_segment.i: scene_segment.cpp.i
+pointcloud_merge.i: pointcloud_merge.cpp.i
 
-.PHONY : scene_segment.i
+.PHONY : pointcloud_merge.i
 
 # target to preprocess a source file
-scene_segment.cpp.i:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/scene_segment.dir/build.make pcl_segment/CMakeFiles/scene_segment.dir/scene_segment.cpp.i
-.PHONY : scene_segment.cpp.i
+pointcloud_merge.cpp.i:
+	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/pointcloud_merge.dir/build.make pcl_segment/CMakeFiles/pointcloud_merge.dir/pointcloud_merge.cpp.i
+.PHONY : pointcloud_merge.cpp.i
 
-scene_segment.s: scene_segment.cpp.s
+pointcloud_merge.s: pointcloud_merge.cpp.s
 
-.PHONY : scene_segment.s
+.PHONY : pointcloud_merge.s
 
 # target to generate assembly for a file
-scene_segment.cpp.s:
-	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/scene_segment.dir/build.make pcl_segment/CMakeFiles/scene_segment.dir/scene_segment.cpp.s
-.PHONY : scene_segment.cpp.s
+pointcloud_merge.cpp.s:
+	cd /home/alberto/workspaces/workspace14diciembre/build && $(MAKE) -f pcl_segment/CMakeFiles/pointcloud_merge.dir/build.make pcl_segment/CMakeFiles/pointcloud_merge.dir/pointcloud_merge.cpp.s
+.PHONY : pointcloud_merge.cpp.s
 
 # Help Target
 help:
@@ -525,39 +258,20 @@ help:
 	@echo "... clean"
 	@echo "... depend"
 	@echo "... install/strip"
+	@echo "... install"
+	@echo "... pointcloud_merge"
+	@echo "... edit_cache"
+	@echo "... euclidean_clustering"
 	@echo "... install/local"
-	@echo "... rebuild_cache"
 	@echo "... test"
 	@echo "... list_install_components"
-	@echo "... roscpp_generate_messages_py"
-	@echo "... roscpp_generate_messages_eus"
-	@echo "... edit_cache"
-	@echo "... roscpp_generate_messages_lisp"
-	@echo "... rosgraph_msgs_generate_messages_cpp"
-	@echo "... std_msgs_generate_messages_lisp"
-	@echo "... roscpp_generate_messages_cpp"
-	@echo "... install"
-	@echo "... rosgraph_msgs_generate_messages_eus"
-	@echo "... rosgraph_msgs_generate_messages_lisp"
-	@echo "... std_msgs_generate_messages_cpp"
-	@echo "... rosgraph_msgs_generate_messages_nodejs"
-	@echo "... rosgraph_msgs_generate_messages_py"
-	@echo "... std_msgs_generate_messages_eus"
-	@echo "... scene_segment"
-	@echo "... pclview"
-	@echo "... euclidean_clustering"
-	@echo "... std_msgs_generate_messages_nodejs"
-	@echo "... roscpp_generate_messages_nodejs"
-	@echo "... std_msgs_generate_messages_py"
+	@echo "... rebuild_cache"
 	@echo "... euclidean_clustering.o"
 	@echo "... euclidean_clustering.i"
 	@echo "... euclidean_clustering.s"
-	@echo "... pclview.o"
-	@echo "... pclview.i"
-	@echo "... pclview.s"
-	@echo "... scene_segment.o"
-	@echo "... scene_segment.i"
-	@echo "... scene_segment.s"
+	@echo "... pointcloud_merge.o"
+	@echo "... pointcloud_merge.i"
+	@echo "... pointcloud_merge.s"
 .PHONY : help
 
 
