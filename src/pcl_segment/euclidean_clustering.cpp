@@ -296,7 +296,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
     /************************************************************************************************************************************************************************/
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // En este punto, cada clúster que se va encontrando se analiza para ver si se puede representar como elemento vertical. Si el Fitting sale positivo, guardaremos únicamente las componentes
-    // At this point, each cluster is analysed in order to  
+    // At this point, each cluster is analysed in order to 
          
     // Create the segmentation object for cylinder segmentation and set all the parameters
     pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> seg;
@@ -351,6 +351,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
       seg.setRadiusLimits (minRadius, maxRadius);
         
       seg.segment (*inliers_cylinder, *coefficients_cylinder);
+      
       float axis_cylinder_x, axis_cylinder_y, axis_cylinder_z;
       ros::param::get("axis_cylinder_x",axis_cylinder_x);
       ros::param::get("axis_cylinder_y",axis_cylinder_y);
