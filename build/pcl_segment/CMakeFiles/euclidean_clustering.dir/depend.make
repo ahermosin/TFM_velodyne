@@ -79,6 +79,7 @@ pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/sensor_msgs/Image.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/sensor_msgs/PointCloud2.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/sensor_msgs/PointField.h
+pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/std_msgs/ColorRGBA.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/std_msgs/Header.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/tf/LinearMath/Matrix3x3.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/tf/LinearMath/MinMax.h
@@ -104,6 +105,8 @@ pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/tf2_msgs/FrameGraphResponse.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/tf2_ros/buffer.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/tf2_ros/buffer_interface.h
+pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/visualization_msgs/Marker.h
+pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/visualization_msgs/MarkerArray.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/xmlrpcpp/XmlRpcDecl.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /opt/ros/melodic/include/xmlrpcpp/XmlRpcValue.h
 pcl_segment/CMakeFiles/euclidean_clustering.dir/euclidean_clustering.cpp.o: /usr/include/eigen3/Eigen/Cholesky
