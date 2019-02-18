@@ -40,7 +40,7 @@ main (int argc, char** argv)
   ros::NodeHandle nh;
   ros::Subscriber sub_i = nh.subscribe ("izq/velodyne_points", 1, callback_i);
   ros::Subscriber sub_d = nh.subscribe ("der/velodyne_points", 1, callback_d);
-  ros::Publisher chatter_pub = nh.advertise<sensor_msgs::PointCloud2>("pointcloudmerged", 1000);
+  ros::Publisher chatter_pub = nh.advertise<sensor_msgs::PointCloud2>("pointcloudmerged", 1);
   ros::Rate loop_rate(10);
   
   tf::TransformListener listener_i;

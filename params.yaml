@@ -1,3 +1,21 @@
+leafSize: 0.15
+DistanceThresholdLine: 0.2
+
+errorMax: 0.23
+ratioMin: 0.45
+
+# Line verticality
+tiltLim: 10.0
+
+# Info text in RViz size
+textScale: 0.4
+
+
+
+
+
+
+
 # Cropping
 low_lim_x: -2.0
 low_lim_y: -2.0
@@ -8,50 +26,23 @@ up_lim_z: 2.0
 
 # Downsampling
 do_downsampling: true
-leafSize: 0.3
 
 # Ground extraction
 KSearchGround: 15
+OptimizeCoefficientsGround: true
 NormalDistanceWeightGround: 0.1
 MaxIterationsGround: 50
 DistanceThresholdGround: 0.7
 
 # Euclidean clustering
-clusterTolerance: 0.9
-clusterMinSize: 10
-clusterMaxSize: 100
+clusterTolerance: 0.95
+
 
 # KSearch for normals extraction in clusters
 KSearchClusterFit: 10
 
 # Line fitting
-NormalDistanceWeightLine: 0.99
-MaxIterationsLine: 100
-DistanceThresholdLine: 0.05
+OptimizeCoefficientsLine: true
+NormalDistanceWeightLine: 0.01
+MaxIterationsLine: 1000
 
-# Stick fitting
-NormalDistanceWeightStick: 0.5
-MaxIterationsStick: 500
-DistanceThresholdStick: 0.1
-minRadiusStick: 0.0
-maxRadiusStick: 0.2
-
-# Line verticality
-axis_line_x: 0.1
-axis_line_y: 0.1
-axis_line_z: 0.85
-
-# Stick width
-maxWidth: 0.2
-
-# Cylinder fitting
-NormalDistanceWeightCylinder: 0.5
-MaxIterationsCylinder: 500
-DistanceThresholdCylinder: 0.1
-minRadiusCylinder: 0.0
-maxRadiusCylinder: 0.1
-
-# Cylinder verticality
-axis_cylinder_x: 0.1
-axis_cylinder_y: 0.1
-axis_cylinder_z: 0.8

@@ -41,8 +41,6 @@ pcl/sample_consensus/model_types.h
 -
 pcl/sample_consensus/sac_model_line.h
 -
-pcl/sample_consensus/sac_model_stick.h
--
 pcl/sample_consensus/sac_model_plane.h
 -
 pcl/sample_consensus/sac_model_sphere.h

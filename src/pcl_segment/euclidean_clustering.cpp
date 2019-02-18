@@ -15,7 +15,6 @@
 #include <pcl/sample_consensus/ransac.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/sample_consensus/sac_model_line.h>
-#include <pcl/sample_consensus/sac_model_stick.h>
 #include <pcl/sample_consensus/sac_model_plane.h>
 #include <pcl/sample_consensus/sac_model_sphere.h>
 #include <pcl/segmentation/sac_segmentation.h>
@@ -32,19 +31,19 @@
 #include "pcl_conversions/pcl_conversions.h"
 #include <stdexcept>
 
-geometry_msgs::PoseArray msg;
-sensor_msgs::PointCloud2 msg_ds; // for tracking-debugging purposes
-sensor_msgs::PointCloud2 msg_cl; // for tracking-debugging purposes
-sensor_msgs::PointCloud2 msg_ng; // for tracking-debugging purposes
-visualization_msgs::MarkerArray marker_array;
+geometry_msgs::PoseArray msg_ve;
+sensor_msgs::PointCloud2 msg_ds;
+sensor_msgs::PointCloud2 msg_cl;
+sensor_msgs::PointCloud2 msg_ng;
+visualization_msgs::MarkerArray marker_array; // Global messages definitions
 
   
-void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publicando el /izq/velodyne_points para que la callback lo detecte
+void callback(const sensor_msgs::PointCloud2ConstPtr& input)
 {
 
 	sensor_msgs::PointCloud2::Ptr clusters (new sensor_msgs::PointCloud2);	
   geometry_msgs::PoseArray msg_aux;
-  visualization_msgs::MarkerArray marker_array_aux;
+  visualization_msgs::MarkerArray marker_array_aux; // Local messages definitions
 	
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloudCropped (new pcl::PointCloud<pcl::PointXYZ>), cloudDownsampled (new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::fromROSMsg(*input, *cloud); // The ROS message, given as sensor_msgs::PointCloud2ConstPtr is translated to PCL type pcl::PointCloud<pcl::PointXYZ>::Ptr
@@ -113,12 +112,12 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
 //                                                                           V
 ///////////////////////////////////////////////////////////////////    DOWNSAMPLING
   bool do_downsampling; // Downsample the dataset using a leaf size of leafSize meters
+  float leafSize;
   ros::param::get("do_downsampling", do_downsampling);
   if (do_downsampling)
   {
     pcl::VoxelGrid<pcl::PointXYZ> vg;
     vg.setInputCloud (cloudCropped);
-    float leafSize;
     ros::param::get("leafSize", leafSize);
     vg.setLeafSize (leafSize, leafSize, leafSize);
     vg.filter (*cloudDownsampled);
@@ -148,12 +147,12 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
 //////////////////////////////////////////////////////////////     POINT NORMALS ESTIMATION
   pcl::PointCloud<pcl::Normal>::Ptr cloudNormals (new pcl::PointCloud<pcl::Normal>);
   pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> neGround, neClusters;
-  pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> segGround; 
+  pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> segGroundN; 
   pcl::ExtractIndices<pcl::PointXYZ> extract;
   pcl::search::KdTree<pcl::PointXYZ>::Ptr treeGround (new pcl::search::KdTree<pcl::PointXYZ> ());
   pcl::ModelCoefficients::Ptr coefficientsGround (new pcl::ModelCoefficients);
-  pcl::ModelCoefficients::Ptr coefficientsLine (new pcl::ModelCoefficients), coefficientsCylinder (new pcl::ModelCoefficients);
-  pcl::PointIndices::Ptr inliersGround (new pcl::PointIndices), inliersLine (new pcl::PointIndices), inliersCylinder (new pcl::PointIndices), inliersStick (new pcl::PointIndices);
+  pcl::ModelCoefficients::Ptr coefficientsLine (new pcl::ModelCoefficients);
+  pcl::PointIndices::Ptr inliersGround (new pcl::PointIndices), inliersLine (new pcl::PointIndices);
  
   neGround.setSearchMethod (treeGround);
   neGround.setInputCloud (cloudDownsampled); // Doing downsampling increases computation speed up to 10 times
@@ -173,21 +172,23 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
 //                                                                           |
 //                                                                           V
 ///////////////////////////////////////////////////////////////////  GROUND EXTRACTION
-  segGround.setOptimizeCoefficients (true);
-  segGround.setModelType (pcl::SACMODEL_NORMAL_PLANE);
+  bool OptimizeCoefficientsGround;
+  ros::param::get("OptimizeCoefficientsGround", OptimizeCoefficientsGround);
+  segGroundN.setOptimizeCoefficients (OptimizeCoefficientsGround);
+  segGroundN.setModelType (pcl::SACMODEL_NORMAL_PLANE);
   float NormalDistanceWeightGround;
   ros::param::get("NormalDistanceWeightGround", NormalDistanceWeightGround);
-  segGround.setNormalDistanceWeight (NormalDistanceWeightGround);
-  segGround.setMethodType (pcl::SAC_RANSAC);
+  segGroundN.setNormalDistanceWeight (NormalDistanceWeightGround);
+  segGroundN.setMethodType (pcl::SAC_RANSAC);
   float MaxIterationsGround;
   ros::param::get("MaxIterationsGround", MaxIterationsGround);
-  segGround.setMaxIterations (MaxIterationsGround);
+  segGroundN.setMaxIterations (MaxIterationsGround);
   float DistanceThresholdGround;
   ros::param::get("DistanceThresholdGround", DistanceThresholdGround);
-  segGround.setDistanceThreshold (DistanceThresholdGround);
-  segGround.setInputCloud (cloudDownsampled);
-  segGround.setInputNormals (cloudNormals);
-  segGround.segment (*inliersGround, *coefficientsGround);
+  segGroundN.setDistanceThreshold (DistanceThresholdGround);
+  segGroundN.setInputCloud (cloudDownsampled);
+  segGroundN.setInputNormals (cloudNormals);
+  segGroundN.segment (*inliersGround, *coefficientsGround);
 
   extract.setInputCloud (cloudDownsampled); // Extract the planar inliers from the input cloud
   extract.setIndices (inliersGround);
@@ -215,12 +216,13 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
   pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
   float clusterTolerance;
   ros::param::get("clusterTolerance", clusterTolerance);
-  float clusterMinSize;
-  ros::param::get("clusterMinSize", clusterMinSize);
-  float clusterMaxSize;
-  ros::param::get("clusterMaxSize", clusterMaxSize);
   
   ec.setClusterTolerance (clusterTolerance); // Be careful setting the right value for setClusterTolerance(). If you take a very small value, it can happen that an actual object can be seen as multiple clusters. On the other hand, if you set the value too high, it could happen, that multiple objects are seen as one cluster.
+
+  float clusterMinSize, clusterMaxSize;
+  clusterMinSize = -37.5*leafSize + 23.75; // for leafSize = 0.1 -> clusterMinSize = 20 | for leafSize = 0.5 -> clusterMinSize = 5
+  clusterMaxSize = -500.0*leafSize + 350.0; // for leafSize = 0.1 -> clusterMaxSize = 300 | for leafSize = 0.5 -> clusterMinSize = 100 
+  
   ec.setMinClusterSize (clusterMinSize);
   ec.setMaxClusterSize (clusterMaxSize);
   ec.setSearchMethod (treeClusters);
@@ -254,11 +256,70 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
   pcl::toROSMsg(*clustersTotal, msg_cl); 
   msg_cl.header.frame_id = "base_link";
     
+  float textScale;
+  ros::param::get("textScale", textScale);
+  float xpLine, ypLine, zpLine, xdLine, ydLine, zdLine;
   int j = 0;
   int n = 0;
+  
+  pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> segLineN;
+  pcl::search::KdTree<pcl::PointXYZ>::Ptr treeCloudCluster (new pcl::search::KdTree<pcl::PointXYZ> ());
+    
+  float KSearchClusterFit;
+  ros::param::get("KSearchClusterFit", KSearchClusterFit);
+  bool OptimizeCoefficientsLine;
+  ros::param::get("OptimizeCoefficientsLine", OptimizeCoefficientsLine);
+  float NormalDistanceWeightLine;
+  ros::param::get("NormalDistanceWeightLine", NormalDistanceWeightLine);
+  int MaxIterationsLine;
+  ros::param::get("MaxIterationsLine", MaxIterationsLine);
+  float DistanceThresholdLine;
+  ros::param::get("DistanceThresholdLine", DistanceThresholdLine);
+  float errorMax, ratioMin;
+  ros::param::get("errorMax", errorMax);
+  ros::param::get("ratioMin", ratioMin);
+  float axis_line_x, axis_line_y, axis_line_z;
+  ros::param::get("axis_line_x",axis_line_x);
+  ros::param::get("axis_line_y",axis_line_y);
+  ros::param::get("axis_line_z",axis_line_z);
+  float cumsum, cumsum2, error, ratio; // error is taking into account all distances from the point in the cluster, not only inliers
+  bool isVerticalElement;
+  float tiltLim;
+  ros::param::get("tiltLim",tiltLim);
+  
+  float u[3]; // u is the normalized vector used to turn Z axis until it reaches the orientation of the vertical element, by turning theta radians. It is obtained by cross-multiplying Z-axis and the director vector of the vertical element
+  float theta;
+
+  visualization_msgs::Marker marker_aux;
+  geometry_msgs::Pose pose;
+  tf::Quaternion q;
+  geometry_msgs::Quaternion element_orientation;
+
+  neClusters.setSearchMethod (treeCloudCluster);
+  neClusters.setKSearch (KSearchClusterFit);
+  
+  segLineN.setOptimizeCoefficients (OptimizeCoefficientsLine);
+  segLineN.setModelType (pcl::SACMODEL_LINE);
+  segLineN.setMethodType (pcl::SAC_RANSAC);
+  segLineN.setNormalDistanceWeight (NormalDistanceWeightLine);
+  segLineN.setMaxIterations (MaxIterationsLine);
+  segLineN.setDistanceThreshold (DistanceThresholdLine);
+
+  marker_aux.header.frame_id = "/base_link";
+  marker_aux.ns = "error_display";
+  marker_aux.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+  marker_aux.action = visualization_msgs::Marker::ADD;
+  marker_aux.scale.z = textScale;
+  marker_aux.color.a = 1.0;
+
+  
   for (std::vector<pcl::PointIndices>::const_iterator it = clusterIndices.begin (); it != clusterIndices.end (); ++it) // Each for-iteration means analysing one point cloud at a time, considered as a cluster according to the previous stage. The whole analysis of each cluster will be performed within the for-loop. We're iterating through clusterIndices. 
   {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloudCluster (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::Normal>::Ptr cloudClusterNormals (new pcl::PointCloud<pcl::Normal>);
+    Eigen::VectorXf coefficientsFitLine(6);
+    std::vector<double> distances;
+    
     for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
       cloudCluster->points.push_back (cloudNoGround->points[*pit]);
       
@@ -266,65 +327,38 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
     cloudCluster->height = 1;
     cloudCluster->is_dense = true; // At this point, there is only one cluster stored in cloudCluster variable, and it will be analysed in order to being identified as a vertical element. If fitting is successful, its components will be stored
 
-    pcl::SACSegmentationFromNormals<pcl::PointXYZ, pcl::Normal> segLine, segCylinder;
-    pcl::SampleConsensusModelStick<pcl::PointXYZ> fitStick (cloudCluster);
-    Eigen::VectorXf coefficientsStick(7);
-    std::vector<double> distances;
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr treeCloudCluster (new pcl::search::KdTree<pcl::PointXYZ> ());
-    pcl::PointCloud<pcl::Normal>::Ptr cloudClusterNormals (new pcl::PointCloud<pcl::Normal>);
-
-    neClusters.setSearchMethod (treeCloudCluster);
+    pcl::SampleConsensusModelLine<pcl::PointXYZ> fitLine (cloudCluster);
     neClusters.setInputCloud (cloudCluster);
-    float KSearchClusterFit;
-    ros::param::get("KSearchClusterFit", KSearchClusterFit);
-    neClusters.setKSearch (KSearchClusterFit);
     neClusters.compute (*cloudClusterNormals);
+    segLineN.setInputCloud (cloudCluster);
+    segLineN.setInputNormals (cloudClusterNormals);
+    segLineN.segment (*inliersLine, *coefficientsLine); // Obtain the line inliers and coefficients
 
-    segLine.setOptimizeCoefficients (true);
-    segLine.setModelType (pcl::SACMODEL_LINE);
-    segLine.setMethodType (pcl::SAC_RANSAC);
-    float NormalDistanceWeightLine;
-    ros::param::get("NormalDistanceWeightLine", NormalDistanceWeightLine);
-    segLine.setNormalDistanceWeight (NormalDistanceWeightLine);
-    int MaxIterationsLine;
-    ros::param::get("MaxIterationsLine", MaxIterationsLine);
-    segLine.setMaxIterations (MaxIterationsLine);
-    float DistanceThresholdLine;
-    ros::param::get("DistanceThresholdLine", DistanceThresholdLine);
-    segLine.setDistanceThreshold (DistanceThresholdLine);
-    segLine.setInputCloud (cloudCluster);
-    segLine.setInputNormals (cloudClusterNormals);
-
-    segLine.segment (*inliersLine, *coefficientsLine); // Obtain the line inliers and coefficients
-    
     //std::cout << "inliersLine->indices.size(): " << inliersLine->indices.size() << " cloudCluster->points.size(): " << cloudCluster->points.size() << endl;
-    
-    float axis_line_x, axis_line_y, axis_line_z;
-    ros::param::get("axis_line_x",axis_line_x);
-    ros::param::get("axis_line_y",axis_line_y);
-    ros::param::get("axis_line_z",axis_line_z);
-     
-    float maxWidth;
-    ros::param::get("maxWidth", maxWidth);
+
+    xpLine = coefficientsLine->values[0];
+    ypLine = coefficientsLine->values[1];
+    zpLine = coefficientsLine->values[2];
+    xdLine = coefficientsLine->values[3];
+    ydLine = coefficientsLine->values[4];
+    zdLine = coefficientsLine->values[5];
+
     if(coefficientsLine->values.size() != 0)
     {
-      if(abs(coefficientsLine->values[3])<axis_line_x && abs(coefficientsLine->values[4])<axis_line_y && abs(coefficientsLine->values[5])>axis_line_z) // inclinación menor a 10º aprox
+      if(zdLine > cos(tiltLim*3.1415/180.0)) // less than a user-given tilt
       {
+        coefficientsFitLine(0) = xpLine;
+        coefficientsFitLine(1) = ypLine;
+        coefficientsFitLine(2) = zpLine;
+        coefficientsFitLine(3) = xdLine;
+        coefficientsFitLine(4) = ydLine;
+        coefficientsFitLine(5) = zdLine;
         
-        coefficientsStick(0) = coefficientsLine->values[0];
-        coefficientsStick(1) = coefficientsLine->values[1];
-        coefficientsStick(2) = coefficientsLine->values[2];
+        fitLine.getDistancesToModel(coefficientsFitLine, distances);
 
-        coefficientsStick(3) = coefficientsLine->values[3];
-        coefficientsStick(4) = coefficientsLine->values[4];
-        coefficientsStick(5) = coefficientsLine->values[5];
-
-        fitStick.getDistancesToModel(coefficientsStick, distances);
-
-        float cumsum, cumsum2, error;
-        cumsum = 0.0;
+        cumsum  = 0.0;
         cumsum2 = 0.0;
-        error = 0.0;
+        error   = 0.0;
         
         for (int it2 = 0; it2 != distances.size (); ++it2)
         {
@@ -333,79 +367,47 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
         
         cumsum = sqrt(cumsum2);
         error = cumsum/inliersLine->indices.size();
+        ratio = (float)inliersLine->indices.size()/(float)cloudCluster->points.size();
         
-        visualization_msgs::Marker marker_aux;
-        marker_aux.header.frame_id = "/base_link";
+        if (error < errorMax && ratio > ratioMin)
+        {
+          isVerticalElement = true;
+          marker_aux.color.r = 0.0f;
+          marker_aux.color.g = 1.0f;
+          marker_aux.color.b = 0.0f;
+        }
+        else
+        {
+          isVerticalElement = false;
+          marker_aux.color.r = 1.0f;
+          marker_aux.color.g = 0.0f;
+          marker_aux.color.b = 0.0f;
+        }
+        
         marker_aux.header.stamp = ros::Time::now();
-        marker_aux.ns = "error_display";
         marker_aux.id = n;
-        marker_aux.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
-        marker_aux.action = visualization_msgs::Marker::ADD;
-
-        marker_aux.pose.position.x = coefficientsStick(0);
-        marker_aux.pose.position.y = coefficientsStick(1);
-        marker_aux.pose.position.z = coefficientsStick(2) + 2.0;
+        marker_aux.pose.position.x = xpLine;
+        marker_aux.pose.position.y = ypLine;
+        marker_aux.pose.position.z = zpLine + 2.0;
         
         std::stringstream ss;
-        float ratio = inliersLine->indices.size() / cloudCluster->points.size();
-        ss << "Error: " << error << endl << "Inliers: " << inliersLine->indices.size() << endl << "Points: " << cloudCluster->points.size() << endl << "Ratio: " << ((float)inliersLine->indices.size()/(float)cloudCluster->points.size());
+        ss << "Points: " << cloudCluster->points.size() << "\tError: " << error << endl << "Inliers: " << inliersLine->indices.size() << "\tRatio: " << ratio << endl << "Tilt: " << (float)acos(zdLine)*180.0/3.14 << endl << "Vertical Element: " << isVerticalElement;
+        
         marker_aux.text = ss.str();
-
-        marker_aux.scale.z = 1.0;
-
-        marker_aux.color.r = 1.0f;
-        marker_aux.color.g = 1.0f;
-        marker_aux.color.b = 1.0f;
-        marker_aux.color.a = 1.0;
-
         marker_array_aux.markers.push_back(marker_aux);
 
-/*
-        //Una vez detectado como línea vertical se comprueba si tiene propiedades de cilindro de hasta cierto tamaño
-        segCylinder.setModelType (pcl::SACMODEL_CYLINDER);
-        segCylinder.setMethodType (pcl::SAC_RANSAC);
-        float NormalDistanceWeightCylinder;
-        ros::param::get("NormalDistanceWeightCylinder", NormalDistanceWeightCylinder);
-        segCylinder.setNormalDistanceWeight (NormalDistanceWeightCylinder);
-        int MaxIterationsCylinder;
-        ros::param::get("MaxIterationsCylinder", MaxIterationsCylinder);
-        segCylinder.setMaxIterations (MaxIterationsCylinder);
-        float DistanceThresholdCylinder;
-        ros::param::get("DistanceThresholdCylinder", DistanceThresholdCylinder);
-        segCylinder.setDistanceThreshold (DistanceThresholdCylinder);
-        segCylinder.setInputCloud (cloudCluster);
-        segCylinder.setInputNormals (cloudClusterNormals);
-        float minRadiusCylinder, maxRadiusCylinder;
-        ros::param::get("minRadiusCylinder", minRadiusCylinder);
-        ros::param::get("maxRadiusCylinder", maxRadiusCylinder);
-        segCylinder.setRadiusLimits (minRadiusCylinder, maxRadiusCylinder);
-          
-        segCylinder.segment (*inliersCylinder, *coefficientsCylinder);
-        
-        float axis_cylinder_x, axis_cylinder_y, axis_cylinder_z;
-        ros::param::get("axis_cylinder_x",axis_cylinder_x);
-        ros::param::get("axis_cylinder_y",axis_cylinder_y);
-        ros::param::get("axis_cylinder_z",axis_cylinder_z);
-*/
+        pose.position.x = xpLine; // Line coefficients
+        pose.position.y = ypLine;
+        pose.position.z = zpLine;
 
-        geometry_msgs::Pose pose;
-        pose.position.x = coefficientsLine->values[0]; // Line coefficients
-        pose.position.y = coefficientsLine->values[1];
-        pose.position.z = coefficientsLine->values[2];
-        
-        float u[3]; // u is the normalized vector used to turn Z axis until it reaches the orientation of the vertical element, by turning theta radians. It is obtained by cross-multiplying Z-axis and the director vector of the vertical element
-        float theta;
-
-        u[0] = (-coefficientsLine->values[4]) / (sqrt(pow(coefficientsLine->values[3],2) + pow(coefficientsLine->values[4],2)));
-        u[1] = (coefficientsLine->values[3]) / (sqrt(pow(coefficientsLine->values[3],2) + pow(coefficientsLine->values[4],2)));
+        u[0] = (-ydLine) / (sqrt(pow(xdLine,2) + pow(ydLine,2)));
+        u[1] = (xdLine) / (sqrt(pow(xdLine,2) + pow(ydLine,2)));
         u[2] = 0.0;
         
-        theta = acos(coefficientsLine->values[5]);
+        theta = acos(zdLine);
         
-        tf::Quaternion q; // We need to translate this information into quaternion form
-        q = {sin(theta/2)*u[0], sin(theta/2)*u[1], sin(theta/2)*u[2], cos(theta/2)};
+        q = {sin(theta/2)*u[0], sin(theta/2)*u[1], sin(theta/2)*u[2], cos(theta/2)};  // We need to translate this information into quaternion form
         
-        geometry_msgs::Quaternion element_orientation;
         tf::quaternionTFToMsg(q, element_orientation);
         
         pose.orientation.x = element_orientation.x; // Finally, the quaternion is introduced in the pose message, that will eventually be sent
@@ -415,14 +417,16 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input) // Debe estar publi
 
         msg_aux.poses.push_back(pose);
         n++;
-      }
-    }
+        
+      } // end if(zdLine > cos(tiltLim*3.1415/180.0))
+    } // end if(coefficientsLine->values.size() != 0)
     j++;
-  }
+  } // end for (std::vector<pcl::PointIndices>::const_iterator it = clusterIndices.begin (); it != clusterIndices.end (); ++it)
   
   msg_aux.header.frame_id = "base_link";
   msg_aux.header.stamp = ros::Time::now();
-  msg = msg_aux;
+  
+  msg_ve = msg_aux; // Pass local messages to global messages, to be published in main
   marker_array = marker_array_aux;
 }
 
@@ -434,28 +438,28 @@ main (int argc, char** argv)
   ros::init(argc, argv, "euclidean_clustering");
   ros::NodeHandle nh; 
   ros::Subscriber sub = nh.subscribe ("pointcloudmerged", 1, callback);
-  ros::Publisher chatter_pub = nh.advertise<geometry_msgs::PoseArray>("chatter", 1000);
-  ros::Publisher chatter_pub_ds = nh.advertise<sensor_msgs::PointCloud2>("chatter_ds", 1000); // debugging
-  ros::Publisher chatter_pub_cl = nh.advertise<sensor_msgs::PointCloud2>("chatter_cl", 1000); // debugging
-  ros::Publisher chatter_pub_ng = nh.advertise<sensor_msgs::PointCloud2>("chatter_ng", 1000); // debugging
-  ros::Publisher chatter_pub_text = nh.advertise<visualization_msgs::MarkerArray>("chatter_text", 1000); // debugging
+  ros::Publisher pub_ve = nh.advertise<geometry_msgs::PoseArray>("PoseArray_ve", 1);
+  ros::Publisher pub_ds = nh.advertise<sensor_msgs::PointCloud2>("PointCloud2_ds", 1); // debugging
+  ros::Publisher pub_cl = nh.advertise<sensor_msgs::PointCloud2>("PointCloud2_cl", 1); // debugging
+  ros::Publisher pub_ng = nh.advertise<sensor_msgs::PointCloud2>("PointCloud2_ng", 1); // debugging
+  ros::Publisher pub_text = nh.advertise<visualization_msgs::MarkerArray>("MarkerArray_text", 1); // debugging
   ros::Rate loop_rate(10);
   
   while (ros::ok())
   {
     visualization_msgs::Marker marker_main;
     ros::spinOnce();
-    chatter_pub.publish(msg);
-    chatter_pub_ds.publish(msg_ds); // debugging
-    chatter_pub_cl.publish(msg_cl); // debugging
-    chatter_pub_ng.publish(msg_ng); // debugging
-    chatter_pub_text.publish(marker_array); // debugging
+    pub_ve.publish(msg_ve);
+    pub_ds.publish(msg_ds); // debugging
+    pub_cl.publish(msg_cl); // debugging
+    pub_ng.publish(msg_ng); // debugging
+    pub_text.publish(marker_array); // debugging
 
     loop_rate.sleep();
     
     marker_main.action = visualization_msgs::Marker::DELETEALL; // To avoid dead displays on screen
     marker_array.markers.push_back(marker_main);
-    chatter_pub_text.publish(marker_array); // debugging
+    pub_text.publish(marker_array); // debugging
   }
   return(0);
 }
