@@ -1,0 +1,42 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/lcm_to_ros_generate_messages_nodejs"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/can_coche_caja.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/occupancy_grid.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/mobileye_lane.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/osm_route_corridor.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/warnings_coche.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/control_freno_orden.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/mobileye_alarmas.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/osm_waypoint.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/can_coche_direccion.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/ibeo_objetos.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/gps_data.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/trayectoria.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/can_modulo_orden.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/osm_route_request.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/osm_route_result.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/simple_channel.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/cam.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/estado_coche_LL.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/estado_coche.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/variables_control.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/ibeo_objeto.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/control_acelerador_orden.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/can_modulo_estado.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/mobileye_tsr.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/can_coche_habitaculo_v2.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/control_caja_orden.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/mobileye_obstaculo.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/example_type.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/can_coche_freno_abs.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/imu_all.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/ibeo_puntos.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/control_volante_orden.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/mobileye_tsr_status.js"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/gennodejs/ros/lcm_to_ros/msg/can_coche_velocidad.js"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang )
+  include(CMakeFiles/lcm_to_ros_generate_messages_nodejs.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

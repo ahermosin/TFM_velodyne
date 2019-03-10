@@ -347,6 +347,15 @@ GTEST_MAIN_LIBRARY:FILEPATH=GTEST_MAIN_LIBRARY-NOTFOUND
 //Path to a library.
 GTEST_MAIN_LIBRARY_DEBUG:FILEPATH=GTEST_MAIN_LIBRARY_DEBUG-NOTFOUND
 
+//The directory containing a CMake configuration file for LCM.
+LCM_DIR:PATH=LCM_DIR-NOTFOUND
+
+//Path to a file.
+LCM_INCLUDE_DIR:PATH=/usr/local/include
+
+//Path to a library.
+LCM_LIBRARY:FILEPATH=/usr/local/lib/liblcm.so
+
 //Path to a file.
 LIBUSB_1_INCLUDE_DIR:PATH=/usr/include
 
@@ -753,6 +762,18 @@ gtest_hide_internal_symbols:BOOL=OFF
 //Dependencies for the target
 gtest_main_LIB_DEPENDS:STATIC=general;-lpthread;general;gtest;
 
+//The directory containing a CMake configuration file for lcm_library.
+lcm_library_DIR:PATH=lcm_library_DIR-NOTFOUND
+
+//Value Computed by CMake
+lcm_to_ros_BINARY_DIR:STATIC=/home/alberto/workspaces/workspace14diciembre/build/lcm_to_ros
+
+//Dependencies for target
+lcm_to_ros_LIB_DEPENDS:STATIC=
+
+//Value Computed by CMake
+lcm_to_ros_SOURCE_DIR:STATIC=/home/alberto/workspaces/workspace14diciembre/src/lcm_to_ros
+
 //Path to a library.
 lib:FILEPATH=/opt/ros/melodic/lib/libtopic_tools.so
 
@@ -1087,7 +1108,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=8
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=11
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP
@@ -1136,6 +1157,8 @@ DSSDK_LIBRARY_DepthSensePlugins-ADVANCED:INTERNAL=1
 DSSDK_LIBRARY_turbojpeg-ADVANCED:INTERNAL=1
 //Details about finding Flann
 FIND_PACKAGE_MESSAGE_DETAILS_Flann:INTERNAL=[/usr/lib/x86_64-linux-gnu/libflann_cpp_s.a][/usr/include][v()]
+//Details about finding LCM
+FIND_PACKAGE_MESSAGE_DETAILS_LCM:INTERNAL=[/usr/local/lib/liblcm.so][/usr/local/include][v()]
 //Details about finding OpenNI2
 FIND_PACKAGE_MESSAGE_DETAILS_OpenNI2:INTERNAL=[/usr/lib/libOpenNI2.so][/usr/include/openni2][v()]
 //Details about finding PCL
@@ -1222,6 +1245,10 @@ GTEST_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
 GTEST_MAIN_LIBRARY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: GTEST_MAIN_LIBRARY_DEBUG
 GTEST_MAIN_LIBRARY_DEBUG-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: LCM_INCLUDE_DIR
+LCM_INCLUDE_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: LCM_LIBRARY
+LCM_LIBRARY-ADVANCED:INTERNAL=1
 //Result of TRY_COMPILE
 LD_ACCEPTS_VERSION_SCRIPT:INTERNAL=TRUE
 //ADVANCED property for variable: PCL_APPS_LIBRARY

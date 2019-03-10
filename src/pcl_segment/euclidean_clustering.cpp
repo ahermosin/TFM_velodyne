@@ -220,7 +220,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   ec.setClusterTolerance (clusterTolerance); // Be careful setting the right value for setClusterTolerance(). If you take a very small value, it can happen that an actual object can be seen as multiple clusters. On the other hand, if you set the value too high, it could happen, that multiple objects are seen as one cluster.
 
   float clusterMinSize, clusterMaxSize;
-  clusterMinSize = -37.5*leafSize + 23.75; // for leafSize = 0.1 -> clusterMinSize = 20 | for leafSize = 0.5 -> clusterMinSize = 5
+  clusterMinSize = -25.0*leafSize + 17.5; // for leafSize = 0.1 -> clusterMinSize = 15 | for leafSize = 0.5 -> clusterMinSize = 5
   clusterMaxSize = -500.0*leafSize + 350.0; // for leafSize = 0.1 -> clusterMaxSize = 300 | for leafSize = 0.5 -> clusterMinSize = 100 
   
   ec.setMinClusterSize (clusterMinSize);

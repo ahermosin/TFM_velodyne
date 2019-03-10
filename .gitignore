@@ -1,1 +1,17 @@
 velodyne_caja_y_pelota*
+Validacion/
+
+src/lcm_to_ros/*.py[cod]
+src/lcm_to_ros/*~
+src/lcm_to_ros/exlcm/*
+src/lcm_to_ros/msg/*
+src/lcm_to_ros/launch/*.launch
+src/lcm_to_ros/autosrc/*
+src/lcm_to_ros/lcm/*.lcm
+src/lcm_to_ros/!lcm/example_type.lcm
+src/lcm_to_ros/!lcm/simple_channel.lcm
+src/lcm_to_ros/repub_configs/*
+src/lcm_to_ros/!repub_configs/example_republishers.cfg
+
+src/lcm_to_ros/autopia/
+

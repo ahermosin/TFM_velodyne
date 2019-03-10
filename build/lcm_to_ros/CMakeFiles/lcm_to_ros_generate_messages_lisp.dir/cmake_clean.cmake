@@ -1,0 +1,42 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/lcm_to_ros_generate_messages_lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/can_coche_caja.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/occupancy_grid.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/mobileye_lane.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/osm_route_corridor.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/warnings_coche.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/control_freno_orden.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/mobileye_alarmas.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/osm_waypoint.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/can_coche_direccion.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/ibeo_objetos.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/gps_data.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/trayectoria.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/can_modulo_orden.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/osm_route_request.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/osm_route_result.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/simple_channel.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/cam.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/estado_coche_LL.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/estado_coche.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/variables_control.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/ibeo_objeto.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/control_acelerador_orden.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/can_modulo_estado.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/mobileye_tsr.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/can_coche_habitaculo_v2.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/control_caja_orden.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/mobileye_obstaculo.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/example_type.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/can_coche_freno_abs.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/imu_all.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/ibeo_puntos.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/control_volante_orden.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/mobileye_tsr_status.lisp"
+  "/home/alberto/workspaces/workspace14diciembre/devel/share/common-lisp/ros/lcm_to_ros/msg/can_coche_velocidad.lisp"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang )
+  include(CMakeFiles/lcm_to_ros_generate_messages_lisp.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

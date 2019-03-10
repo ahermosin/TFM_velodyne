@@ -7,4 +7,5 @@
 # new environment variables
 
 # modified environment variables
+export CMAKE_PREFIX_PATH="/home/alberto/workspaces/workspace14diciembre/devel:/opt/ros/melodic"
 export PWD="/home/alberto/workspaces/workspace14diciembre/build"

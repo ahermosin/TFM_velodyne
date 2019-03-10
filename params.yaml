@@ -1,14 +1,14 @@
-leafSize: 0.15
-DistanceThresholdLine: 0.2
+leafSize: 0.2
+DistanceThresholdLine: 0.1
 
-errorMax: 0.23
-ratioMin: 0.45
+errorMax: 0.28
+ratioMin: 0.4
 
 # Line verticality
 tiltLim: 10.0
 
 # Info text in RViz size
-textScale: 0.4
+textScale: 0.5
 
 
 
@@ -35,7 +35,7 @@ MaxIterationsGround: 50
 DistanceThresholdGround: 0.7
 
 # Euclidean clustering
-clusterTolerance: 0.95
+clusterTolerance: 0.8
 
 
 # KSearch for normals extraction in clusters
