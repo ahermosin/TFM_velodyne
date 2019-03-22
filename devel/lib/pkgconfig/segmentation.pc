@@ -1,8 +1,0 @@
-prefix=/home/alberto/workspaces/workspace14diciembre/devel
-
-Name: segmentation
-Description: Description of segmentation
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/alberto/workspaces/workspace14diciembre/devel/lib 
-Requires: 
