@@ -1,8 +1,0 @@
-prefix=/home/alberto/workspaces/workspace14diciembre/install
-
-Name: pcl_segment
-Description: Description of pcl_segment
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/alberto/workspaces/workspace14diciembre/install/lib 
-Requires: 

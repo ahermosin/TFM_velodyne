@@ -15,3 +15,4 @@ src/lcm_to_ros/!repub_configs/example_republishers.cfg
 
 src/lcm_to_ros/autopia/
 
+build/
