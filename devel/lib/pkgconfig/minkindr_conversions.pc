@@ -1,0 +1,8 @@
+prefix=/home/alberto/workspaces/workspace14diciembre/devel
+
+Name: minkindr_conversions
+Description: Description of minkindr_conversions
+Version: 0.0.0
+Cflags: -I/home/alberto/workspaces/workspace14diciembre/src/minkindr_ros/minkindr_conversions/include
+Libs: -L/home/alberto/workspaces/workspace14diciembre/devel/lib 
+Requires: eigen_conversions geometry_msgs glog_catkin gflags_catkin minkindr tf tf_conversions

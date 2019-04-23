@@ -1,0 +1,8 @@
+prefix=/home/alberto/workspaces/workspace14diciembre/devel
+
+Name: gflags_catkin
+Description: Description of gflags_catkin
+Version: 2.2.1
+Cflags: -I/home/alberto/workspaces/workspace14diciembre/devel/include
+Libs: -L/home/alberto/workspaces/workspace14diciembre/devel/lib -lgflags
+Requires: 

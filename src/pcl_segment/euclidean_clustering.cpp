@@ -36,11 +36,12 @@ sensor_msgs::PointCloud2 msg_ds;
 sensor_msgs::PointCloud2 msg_cl;
 sensor_msgs::PointCloud2 msg_ng;
 visualization_msgs::MarkerArray marker_array; // Global messages definitions
-
+//  std::cout << "Calculated in " << 1000.0*((float)t)/CLOCKS_PER_SEC << " milliseconds" << std::endl;
   
 void callback(const sensor_msgs::PointCloud2ConstPtr& input)
 {
-
+  clock_t t1, t2;
+  t1 = clock();
 	sensor_msgs::PointCloud2::Ptr clusters (new sensor_msgs::PointCloud2);	
   geometry_msgs::PoseArray msg_aux;
   visualization_msgs::MarkerArray marker_array_aux; // Local messages definitions
@@ -127,6 +128,12 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
     *cloudDownsampled = *cloudCropped;
   
   pcl::toROSMsg(*cloudDownsampled, msg_ds); // For visualization purposes, the downsampled cloud is published to a topic
+  float delay_ds;
+  ros::param::get("delay_ds", delay_ds);
+  t2 = clock();
+  delay_ds = (float)(t2-t1)/CLOCKS_PER_SEC;
+  msg_ds.header.stamp = ros::Time::now() - ros::Duration(delay_ds);
+  t1 = clock();
   msg_ds.header.frame_id = "base_link"; 
 //////////////////////////////////////////////////////////////////////////////////////
 //                                                                 CLOUD (NOT) DOWNSAMPLED
@@ -197,6 +204,12 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   extract.filter (*cloudNoGround);
   
   pcl::toROSMsg(*cloudNoGround, msg_ng);
+  float delay_ng;
+  ros::param::get("delay_ng", delay_ng);
+  t2 = clock();
+  delay_ng = (float)(t2-t1)/CLOCKS_PER_SEC;
+  msg_ng.header.stamp = ros::Time::now() - ros::Duration(delay_ng);
+  t1 = clock();
   msg_ng.header.frame_id = "base_link";
 //////////////////////////////////////////////////////////////////////////////////////
 //                                                                 CLOUD WITHOUT GROUND
@@ -254,6 +267,12 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
     *clustersTotal = *clustersTotal + *cloudCluster;
   }
   pcl::toROSMsg(*clustersTotal, msg_cl); 
+  float delay_cl;
+  ros::param::get("delay_cl",delay_cl);
+  t2 = clock();
+  delay_cl = (float)(t2-t1)/CLOCKS_PER_SEC;
+  msg_cl.header.stamp= ros::Time::now() - ros::Duration(delay_cl);
+  t1 = clock();
   msg_cl.header.frame_id = "base_link";
     
   float textScale;
@@ -282,6 +301,9 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   ros::param::get("axis_line_x",axis_line_x);
   ros::param::get("axis_line_y",axis_line_y);
   ros::param::get("axis_line_z",axis_line_z);
+  float heightMax;
+  ros::param::get("heightMax",heightMax);
+  float zMax, zMin, x_zMax, x_zMin, y_zMax, y_zMin, height;
   float cumsum, cumsum2, error, ratio; // error is taking into account all distances from the point in the cluster, not only inliers
   bool isVerticalElement;
   float tiltLim;
@@ -354,6 +376,28 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
         coefficientsFitLine(4) = ydLine;
         coefficientsFitLine(5) = zdLine;
         
+        /*Calculate height of cluster by finding zMax and zMin*/ //APPROX
+        zMax = cloudCluster->points[0].z;
+        zMin = cloudCluster->points[0].z;
+        for (k=1; k<=cloudCluster->points.size(); k++)
+        {
+          if (cloudCluster->points[k].z < zMin)
+          {
+            zMin = cloudCluster->points[k].z;
+            x_zMin = cloudCluster->points[k].x;
+            y_zMin = cloudCluster->points[k].y;
+            
+          }
+          else if (cloudCluster->points[k].z > zMax)
+          {
+            zMax = cloudCluster->points[k].z;
+            x_zMax = cloudCluster->points[k].x;
+            y_zMax = cloudCluster->points[k].y;
+          }
+        }
+        height = sqrt(pow(zMax-zMin,2) + pow(x_zMax-x_zMin,2) + pow(y_zMax-y_zMin,2));
+        /******************************************************/
+        
         fitLine.getDistancesToModel(coefficientsFitLine, distances);
 
         cumsum  = 0.0;
@@ -369,7 +413,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
         error = cumsum/inliersLine->indices.size();
         ratio = (float)inliersLine->indices.size()/(float)cloudCluster->points.size();
         
-        if (error < errorMax && ratio > ratioMin)
+        if (error < errorMax && ratio > ratioMin && height < heightMax)
         {
           isVerticalElement = true;
           marker_aux.color.r = 0.0f;
@@ -384,14 +428,14 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
           marker_aux.color.b = 0.0f;
         }
         
-        marker_aux.header.stamp = ros::Time::now();
+        //marker_aux.header.stamp = ros::Time::now();
         marker_aux.id = n;
         marker_aux.pose.position.x = xpLine;
         marker_aux.pose.position.y = ypLine;
         marker_aux.pose.position.z = zpLine + 2.0;
         
         std::stringstream ss;
-        ss << "Points: " << cloudCluster->points.size() << "\tError: " << error << endl << "Inliers: " << inliersLine->indices.size() << "\tRatio: " << ratio << endl << "Tilt: " << (float)acos(zdLine)*180.0/3.14 << endl << "Vertical Element: " << isVerticalElement;
+        ss << "Points: " << cloudCluster->points.size() << "\tError: " << error << endl << "Inliers: " << inliersLine->indices.size() << "\tRatio: " << ratio << endl << "Tilt: " << (float)acos(zdLine)*180.0/3.14 << "\tHeight: " << zMax-zMin << endl << "Vertical Element: " << isVerticalElement;
         
         marker_aux.text = ss.str();
         marker_array_aux.markers.push_back(marker_aux);
@@ -422,11 +466,14 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
     } // end if(coefficientsLine->values.size() != 0)
     j++;
   } // end for (std::vector<pcl::PointIndices>::const_iterator it = clusterIndices.begin (); it != clusterIndices.end (); ++it)
-  
+  float delay_ve;
+  ros::param::get("delay_ve", delay_ve);
+  t2 = clock();
+  delay_ve = (float)(t2-t1)/CLOCKS_PER_SEC;
+  msg_aux.header.stamp = ros::Time::now() - ros::Duration(delay_ve);
   msg_aux.header.frame_id = "base_link";
-  msg_aux.header.stamp = ros::Time::now();
   
-  msg_ve = msg_aux; // Pass local messages to global messages, to be published in main
+  msg_ve = msg_aux; // Pass local messages to global messages, in order to be published in main
   marker_array = marker_array_aux;
 }
 
@@ -444,10 +491,10 @@ main (int argc, char** argv)
   ros::Publisher pub_ng = nh.advertise<sensor_msgs::PointCloud2>("PointCloud2_ng", 1); // debugging
   ros::Publisher pub_text = nh.advertise<visualization_msgs::MarkerArray>("MarkerArray_text", 1); // debugging
   ros::Rate loop_rate(10);
+  visualization_msgs::Marker marker_main;
   
   while (ros::ok())
   {
-    visualization_msgs::Marker marker_main;
     ros::spinOnce();
     pub_ve.publish(msg_ve);
     pub_ds.publish(msg_ds); // debugging

@@ -1,5 +1,5 @@
-leafSize: 0.2
-DistanceThresholdLine: 0.1
+leafSize: 0.15
+DistanceThresholdLine: 0.15
 
 errorMax: 0.28
 ratioMin: 0.4
@@ -8,13 +8,18 @@ ratioMin: 0.4
 tiltLim: 10.0
 
 # Info text in RViz size
-textScale: 0.5
+textScale: 2.6
+
+
+delay_merge: 0.05
+delay_ds: 0.2
+delay_ng: 0.1
+delay_cl: 0.1
+delay_ve: 0.2
 
 
 
-
-
-
+use_sim_time: true
 
 # Cropping
 low_lim_x: -2.0
@@ -46,3 +51,10 @@ OptimizeCoefficientsLine: true
 NormalDistanceWeightLine: 0.01
 MaxIterationsLine: 1000
 
+# Max height of vertical elements
+heightMax: 2.2
+
+# Car
+turnRate: 25.0
+wheelsA: 1.5
+wheelsL: 3.0

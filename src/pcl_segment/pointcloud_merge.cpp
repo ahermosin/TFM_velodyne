@@ -46,23 +46,41 @@ main (int argc, char** argv)
   tf::TransformListener listener_i;
   tf::TransformListener listener_d;
   
+  sensor_msgs::PointCloud2 mensaje_i2;
+  sensor_msgs::PointCloud2 mensaje_d2;
+  sensor_msgs::PointCloud2 mensaje;
+  
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_i2 (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_d2 (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+
+  ros::Time stamp_i;
+  ros::Time stamp_d;
+      
+  tf::StampedTransform transform_i;
+  tf::StampedTransform transform_d;
+  float delay_merge;
   while (ros::ok())
   {
-  
-    sensor_msgs::PointCloud2 mensaje_i2;
-    sensor_msgs::PointCloud2 mensaje_d2;
-    sensor_msgs::PointCloud2 mensaje;
+    /*
+    ros::Time now = ros::Time::now();
+    ros::Time past = now - ros::Duration(5.0);
+    */
     
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_i2 (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_d2 (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
-        
-    tf::StampedTransform transform_i;
-    tf::StampedTransform transform_d;
+    
+    ros::spinOnce();
+   
+
+
+    pcl_conversions::toPCL(stamp_i, cloud_i->header.stamp);
+    pcl_conversions::toPCL(stamp_d, cloud_d->header.stamp);
+    //pcl_cloud.header = pcl_conversions::toPCL(pc2->header);
+
+
     
     try{
-      listener_i.lookupTransform("/base_link", "/velodyne_i", ros::Time(0), transform_i);
-      listener_d.lookupTransform("/base_link", "/velodyne_d", ros::Time(0), transform_d);
+      listener_i.lookupTransform("/base_link", "/velodyne_i", stamp_i, transform_i);
+      listener_d.lookupTransform("/base_link", "/velodyne_d", stamp_d, transform_d);
     }
     catch (tf::TransformException ex){
       ROS_ERROR("%s",ex.what());
@@ -81,8 +99,9 @@ main (int argc, char** argv)
 
     pcl::toROSMsg(*cloud, mensaje);
     mensaje.header.frame_id = "base_link";
+    ros::param::get("delay_merge", delay_merge);
+    mensaje.header.stamp = ros::Time::now() - ros::Duration(delay_merge); //CUIDAO AQUÍ
     chatter_pub.publish(mensaje);
-    ros::spinOnce();
     loop_rate.sleep();
   }
   return(0);

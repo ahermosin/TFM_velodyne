@@ -1,0 +1,8 @@
+prefix=/home/alberto/workspaces/workspace14diciembre/devel
+
+Name: eigen_catkin
+Description: Description of eigen_catkin
+Version: 3.2.12
+Cflags: -I/usr/include/eigen3
+Libs: -L/home/alberto/workspaces/workspace14diciembre/devel/lib 
+Requires: 

@@ -1,0 +1,8 @@
+prefix=/home/alberto/workspaces/workspace14diciembre/devel
+
+Name: glog_catkin
+Description: Description of glog_catkin
+Version: 0.3.5
+Cflags: -I/home/alberto/workspaces/workspace14diciembre/devel/include
+Libs: -L/home/alberto/workspaces/workspace14diciembre/devel/lib -lglog
+Requires: gflags_catkin

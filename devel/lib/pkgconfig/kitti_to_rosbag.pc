@@ -1,0 +1,8 @@
+prefix=/home/alberto/workspaces/workspace14diciembre/devel
+
+Name: kitti_to_rosbag
+Description: Description of kitti_to_rosbag
+Version: 0.0.0
+Cflags: -I/home/alberto/workspaces/workspace14diciembre/src/kitti_to_rosbag/kitti_to_rosbag/include
+Libs: -L/home/alberto/workspaces/workspace14diciembre/devel/lib -lkitti_to_rosbag
+Requires: cv_bridge gflags_catkin image_transport minkindr minkindr_conversions pcl_conversions pcl_ros sensor_msgs tf rosbag

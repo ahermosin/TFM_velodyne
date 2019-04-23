@@ -1,0 +1,8 @@
+prefix=/home/alberto/workspaces/workspace14diciembre/devel
+
+Name: droneVisualMarkersLocalizer
+Description: Description of droneVisualMarkersLocalizer
+Version: 1.0.0
+Cflags: -I/home/alberto/workspaces/workspace14diciembre/src/visual_markers_localizer/src/include
+Libs: -L/home/alberto/workspaces/workspace14diciembre/devel/lib -ldroneVisualMarkersLocalizer
+Requires: 

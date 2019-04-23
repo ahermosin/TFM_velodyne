@@ -1,0 +1,8 @@
+prefix=/home/alberto/workspaces/workspace14diciembre/devel
+
+Name: eigen_checks
+Description: Description of eigen_checks
+Version: 0.0.1
+Cflags: -I/home/alberto/workspaces/workspace14diciembre/src/eigen_checks/include
+Libs: -L/home/alberto/workspaces/workspace14diciembre/devel/lib -leigen_checks
+Requires: 
