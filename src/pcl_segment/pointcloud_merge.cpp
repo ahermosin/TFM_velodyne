@@ -70,14 +70,10 @@ main (int argc, char** argv)
     
     ros::spinOnce();
    
-
-
     pcl_conversions::toPCL(stamp_i, cloud_i->header.stamp);
     pcl_conversions::toPCL(stamp_d, cloud_d->header.stamp);
     //pcl_cloud.header = pcl_conversions::toPCL(pc2->header);
-
-
-    
+ 
     try{
       listener_i.lookupTransform("/base_link", "/velodyne_i", stamp_i, transform_i);
       listener_d.lookupTransform("/base_link", "/velodyne_d", stamp_d, transform_d);
@@ -99,8 +95,8 @@ main (int argc, char** argv)
 
     pcl::toROSMsg(*cloud, mensaje);
     mensaje.header.frame_id = "base_link";
-    ros::param::get("delay_merge", delay_merge);
     mensaje.header.stamp = ros::Time::now() - ros::Duration(delay_merge); //CUIDAO AQUÍ
+//    mensaje.header.stamp = ros::Time::now(); //CUIDAO AQUÍ
     chatter_pub.publish(mensaje);
     loop_rate.sleep();
   }

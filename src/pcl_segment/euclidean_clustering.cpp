@@ -377,9 +377,9 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
         coefficientsFitLine(5) = zdLine;
         
         /*Calculate height of cluster by finding zMax and zMin*/ //APPROX
-        zMax = cloudCluster->points[0].z;
-        zMin = cloudCluster->points[0].z;
-        for (k=1; k<=cloudCluster->points.size(); k++)
+        zMax = -9.99e+10;
+        zMin = 9.99e+10;
+        for (k=0; k<=cloudCluster->points.size(); k++)
         {
           if (cloudCluster->points[k].z < zMin)
           {
@@ -395,7 +395,8 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
             y_zMax = cloudCluster->points[k].y;
           }
         }
-        height = sqrt(pow(zMax-zMin,2) + pow(x_zMax-x_zMin,2) + pow(y_zMax-y_zMin,2));
+        //height = sqrt(pow(zMax-zMin,2) + pow(x_zMax-x_zMin,2) + pow(y_zMax-y_zMin,2));
+        height = zMax - zMin;
         /******************************************************/
         
         fitLine.getDistancesToModel(coefficientsFitLine, distances);
@@ -435,7 +436,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
         marker_aux.pose.position.z = zpLine + 2.0;
         
         std::stringstream ss;
-        ss << "Points: " << cloudCluster->points.size() << "\tError: " << error << endl << "Inliers: " << inliersLine->indices.size() << "\tRatio: " << ratio << endl << "Tilt: " << (float)acos(zdLine)*180.0/3.14 << "\tHeight: " << zMax-zMin << endl << "Vertical Element: " << isVerticalElement;
+        ss << "Points: " << cloudCluster->points.size() << "\tError: " << error << endl << "Inliers: " << inliersLine->indices.size() << "\tRatio: " << ratio << endl << "Tilt: " << (float)acos(zdLine)*180.0/3.14 << "\tHeight: " << height << endl << "Vertical Element: " << isVerticalElement;
         
         marker_aux.text = ss.str();
         marker_array_aux.markers.push_back(marker_aux);

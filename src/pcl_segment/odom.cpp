@@ -31,7 +31,9 @@ void callback_vel(const lcm_to_ros::can_coche_velocidad input_vel)
 
 void callback_dir(const lcm_to_ros::can_coche_direccion input_dir)
 {
-  dir = input_dir.angulo_volante/turnRate*3.141592/180.0; //from degrees to rads
+  float angleOffset;
+  ros::param::get("angleOffset", angleOffset); // debugging
+  dir = ((input_dir.angulo_volante - angleOffset)/turnRate)*3.141592/180.0; //from degrees to rads
 }
 
 
@@ -94,6 +96,7 @@ main (int argc, char** argv)
     ros::param::get("turnRate", turnRate); // debugging
     ros::param::get("wheelsL", wheelsL); // debugging
     ros::param::get("wheelsA", wheelsA); // debugging
+    //ros::param::get("angleOffset", angleOffset); // debugging
     
     try{
       listener.lookupTransform("map", "base_link",  
@@ -106,6 +109,7 @@ main (int argc, char** argv)
     
     ros::spinOnce();
     
+    theta = thetaPrev + vel*dT/wheelsL*tan(dir);
     // Esto siguiente está mal?
     /*
     h = wheelsL/tan(dir) + wheelsA/2.0;
@@ -119,7 +123,6 @@ main (int argc, char** argv)
     yn = ynPrev + vel*dT*sin(theta);
     */
     
-    theta = thetaPrev + vel*dT/wheelsL*tan(dir);
     xn = xnPrev + vel*dT*cos(theta);
     yn = ynPrev + vel*dT*sin(theta);
     
