@@ -18,9 +18,14 @@
 #include <lcm_to_ros/can_coche_direccion.h>
 #include <lcm_to_ros/can_coche_velocidad.h>
 
-nav_msgs::Path mypath;
 float vel;
-float dir, turnRate;
+float dir, turnRate, angleOffset;
+geometry_msgs::PoseStamped poseGround;
+
+void callback_ground(const geometry_msgs::PoseStamped input_ground)
+{
+  poseGround = input_ground;
+}
 
 
 void callback_vel(const lcm_to_ros::can_coche_velocidad input_vel)
@@ -31,7 +36,6 @@ void callback_vel(const lcm_to_ros::can_coche_velocidad input_vel)
 
 void callback_dir(const lcm_to_ros::can_coche_direccion input_dir)
 {
-  float angleOffset;
   ros::param::get("angleOffset", angleOffset); // debugging
   dir = ((input_dir.angulo_volante - angleOffset)/turnRate)*3.141592/180.0; //from degrees to rads
 }
@@ -45,9 +49,11 @@ main (int argc, char** argv)
   ros::NodeHandle nh;
   ros::Subscriber sub_vel = nh.subscribe ("/lcm_to_ros/CAN_COCHE_VELOCIDAD", 1, callback_vel);
   ros::Subscriber sub_dir = nh.subscribe ("/lcm_to_ros/CAN_COCHE_DIRECCION", 1, callback_dir);
+  ros::Subscriber sub_ground = nh.subscribe ("poseGround", 1, callback_ground);
   ros::Publisher pub_odom_strip = nh.advertise<visualization_msgs::Marker>("odom_strip", 1); // debugging
   ros::Rate loop_rate(100);
-  static tf::TransformBroadcaster br;
+  
+  tf::TransformBroadcaster br;
   tf::Transform transform_br;
   tf::Quaternion q_br;
 
@@ -69,15 +75,18 @@ main (int argc, char** argv)
   vis_odom_strip.color.a = 1.0;
   
   float dT = 0.01;
-  float xn, yn, theta, xnPrev, ynPrev, thetaPrev, h;
+  float xn, yn, zn, theta, xnPrev, ynPrev, znPrev, thetaPrev, h;
   float wheelsL, wheelsA;
   float deltaD1, deltaD2, deltaD;
   float dirPrev=0.0;
+  float lidarHeight;
   xn = 0.0;
   yn = 0.0;
+  zn = 0.0;
   theta = 0.0;
   xnPrev = 0.0;
   ynPrev = 0.0;
+  znPrev = 0.0;
   thetaPrev = 0.0;
   ros::param::get("turnRate", turnRate);
   
@@ -96,18 +105,20 @@ main (int argc, char** argv)
     ros::param::get("turnRate", turnRate); // debugging
     ros::param::get("wheelsL", wheelsL); // debugging
     ros::param::get("wheelsA", wheelsA); // debugging
-    //ros::param::get("angleOffset", angleOffset); // debugging
-    
+    ros::param::get("lidarHeight", lidarHeight);
+   // std::cout << "flag 0" << std::endl;
+    ros::spinOnce();
+    //std::cout << "flag 1" << std::endl;
     try{
       listener.lookupTransform("map", "base_link",  
-                               ros::Time(0), transform);
+                               ros::Time::now(), transform);
     }
     catch (tf::TransformException ex){
       ROS_ERROR("%s",ex.what());
       ros::Duration(1.0).sleep();
     }
     
-    ros::spinOnce();
+    //std::cout << "flag 2" << std::endl;
     
     theta = thetaPrev + vel*dT/wheelsL*tan(dir);
     // Esto siguiente está mal?
@@ -125,16 +136,18 @@ main (int argc, char** argv)
     
     xn = xnPrev + vel*dT*cos(theta);
     yn = ynPrev + vel*dT*sin(theta);
+    zn = (lidarHeight-poseGround.pose.position.z)*0.0;
+    //std::cout << "lidarHeight: " << lidarHeight << "\tposeGroundz: " << poseGround.pose.position.z << std::endl;
     
-    
-    
-    
-    pose.header.frame_id = "map";
+    pose.header.frame_id = "base_link";
     pose.header.stamp = ros::Time::now();
     
+   // std::cout << "flag 3" << std::endl;
     pose.pose.position.x = xn;
     pose.pose.position.y = yn;
-    pose.pose.position.z = 0.0;
+    pose.pose.position.z = zn*0.0;
+    
+   // std::cout << "flag 4" << std::endl;
     
     u[0] = 0.0;
     u[1] = 0.0;
@@ -151,23 +164,36 @@ main (int argc, char** argv)
     pose.pose.orientation.z = orientation_aux.z;
     pose.pose.orientation.w = orientation_aux.w;
     
-    std::cout << pose << std::endl;
-    transform_br.setOrigin(tf::Vector3(pose.pose.position.x, pose.pose.position.y, 0.0) );
-    tf::quaternionMsgToTF(pose.pose.orientation, q_br);
-    transform_br.setRotation(q_br);
+   // std::cout << "flag 5" << std::endl;
+    //pose.pose.orientation = poseGround.pose.orientation;
+   // std::cout << "flag 6" << std::endl;
     
-    br.sendTransform(tf::StampedTransform(transform_br, ros::Time::now(), "map", "base_link"));
+    std::cout << pose << std::endl;
+  //  std::cout << "flag 7" << std::endl;
+    transform_br.setOrigin(tf::Vector3(pose.pose.position.x, pose.pose.position.y, 0.0*pose.pose.position.z));
+ //   std::cout << "flag 8" << std::endl;
+    tf::quaternionMsgToTF(pose.pose.orientation, q_br);
+   // std::cout << "flag 9" << std::endl;
+    transform_br.setRotation(q_br);
+   // std::cout << "flag 10" << std::endl;
+    
+    br.sendTransform(tf::StampedTransform(transform_br, ros::Time::now() + ros::Duration(0.2), "map", "base_link")); //FIXME ros::Duration(0.2) due to negative time doing tf from rosbag. Remove for further implementation
+ //   std::cout << "flag 11" << std::endl;
     
     point_aux.x = pose.pose.position.x;
     point_aux.y = pose.pose.position.y;
-    point_aux.z = pose.pose.position.z;
+    point_aux.z = 1.0*pose.pose.position.z;
+ //   std::cout << "flag 12" << std::endl;
     vis_odom_strip.points.push_back(point_aux);
+  //  std::cout << "flag 13" << std::endl;
     pub_odom_strip.publish(vis_odom_strip);
+  //  std::cout << "flag 14" << std::endl;
 
     if(abs(vel) <= 0.01) // FIXME debugging
     {
       xnPrev = 0.0;
       ynPrev = 0.0;
+      znPrev = 0.0;
       thetaPrev = 0.0;
       vis_odom_strip.points = {};
     } else
@@ -175,11 +201,14 @@ main (int argc, char** argv)
       dirPrev = dir;
       xnPrev = xn;
       ynPrev = yn;
+      znPrev = zn;
       thetaPrev = theta;
     }
+  //  std::cout << "flag 15" << std::endl;
     //t2 = clock();
     //std::cout << "Calculated in " << 1000.0*((float)(t2-t1))/CLOCKS_PER_SEC << " ms" << std::endl;
     loop_rate.sleep();
+  //  std::cout << "flag 16" << std::endl;
   }
   return(0);
 }

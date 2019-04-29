@@ -2,6 +2,7 @@
 #include <time.h>
 #include <math.h>
 #include <tf/tf.h>
+#include <tf/transform_listener.h>
 #include <tf/LinearMath/Quaternion.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/filters/passthrough.h>
@@ -31,20 +32,28 @@
 #include "pcl_conversions/pcl_conversions.h"
 #include <stdexcept>
 
+#include <iostream>
+#include <fstream>
+
+ofstream myfile ("logFile.txt"); 
+tf::StampedTransform transform;
 geometry_msgs::PoseArray msg_ve;
 sensor_msgs::PointCloud2 msg_ds;
 sensor_msgs::PointCloud2 msg_cl;
 sensor_msgs::PointCloud2 msg_ng;
-visualization_msgs::MarkerArray marker_array; // Global messages definitions
-//  std::cout << "Calculated in " << 1000.0*((float)t)/CLOCKS_PER_SEC << " milliseconds" << std::endl;
+geometry_msgs::PoseStamped msg_ground;
+visualization_msgs::MarkerArray marker_array;
+visualization_msgs::MarkerArray cylinders; // Global messages definitions
   
 void callback(const sensor_msgs::PointCloud2ConstPtr& input)
 {
   clock_t t1, t2;
   t1 = clock();
+  
 	sensor_msgs::PointCloud2::Ptr clusters (new sensor_msgs::PointCloud2);	
   geometry_msgs::PoseArray msg_aux;
-  visualization_msgs::MarkerArray marker_array_aux; // Local messages definitions
+  visualization_msgs::MarkerArray marker_array_aux;
+  visualization_msgs::MarkerArray cylinders_aux; // Local messages definitions
 	
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloudCropped (new pcl::PointCloud<pcl::PointXYZ>), cloudDownsampled (new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::fromROSMsg(*input, *cloud); // The ROS message, given as sensor_msgs::PointCloud2ConstPtr is translated to PCL type pcl::PointCloud<pcl::PointXYZ>::Ptr
@@ -115,12 +124,15 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   bool do_downsampling; // Downsample the dataset using a leaf size of leafSize meters
   float leafSize;
   ros::param::get("do_downsampling", do_downsampling);
+  int minPointsVoxel;
+  ros::param::get("minPointsVoxel", minPointsVoxel);
   if (do_downsampling)
   {
     pcl::VoxelGrid<pcl::PointXYZ> vg;
     vg.setInputCloud (cloudCropped);
     ros::param::get("leafSize", leafSize);
     vg.setLeafSize (leafSize, leafSize, leafSize);
+    vg.setMinimumPointsNumberPerVoxel(minPointsVoxel);
     vg.filter (*cloudDownsampled);
   }
   // If downsampling is disabled (disapproved, since computation time is extremely high)
@@ -132,7 +144,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   ros::param::get("delay_ds", delay_ds);
   t2 = clock();
   delay_ds = (float)(t2-t1)/CLOCKS_PER_SEC;
-  msg_ds.header.stamp = ros::Time::now() - ros::Duration(delay_ds);
+  msg_ds.header.stamp = ros::Time::now() - ros::Duration(0.0*delay_ds);
   t1 = clock();
   msg_ds.header.frame_id = "base_link"; 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -196,6 +208,46 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   segGroundN.setInputCloud (cloudDownsampled);
   segGroundN.setInputNormals (cloudNormals);
   segGroundN.segment (*inliersGround, *coefficientsGround);
+  
+  std::cout << *coefficientsGround << std::endl;
+  
+  geometry_msgs::Vector3 groundDistance;
+  geometry_msgs::Vector3 groundDirection;
+  
+  
+  groundDirection.x = coefficientsGround->values[0];
+  groundDirection.y = coefficientsGround->values[1];
+  groundDirection.z = coefficientsGround->values[2];
+
+  groundDistance.x = coefficientsGround->values[3]*coefficientsGround->values[0];
+  groundDistance.y = coefficientsGround->values[3]*coefficientsGround->values[1];
+  groundDistance.z = coefficientsGround->values[3]*coefficientsGround->values[2];
+  
+  
+  
+  geometry_msgs::PoseStamped pose; // For quaternion conversions
+  tf::Quaternion tfQuat;
+  geometry_msgs::Quaternion gmQuat; 
+  float theta;
+  float u[3]; // u is the normalized vector used to turn Z axis until it reaches the orientation of the ground, by turning theta radians. It is obtained by cross-multiplying Z-axis and the director vector of the vertical element
+
+  msg_ground.header.stamp = ros::Time::now();
+  msg_ground.header.frame_id = "base_link";
+  msg_ground.pose.position.x = groundDistance.x;
+  msg_ground.pose.position.y = groundDistance.y;
+  msg_ground.pose.position.z = groundDistance.z;
+  
+  u[0] = (-groundDirection.y) / (sqrt(pow(groundDirection.x,2) + pow(groundDirection.y,2)));
+  u[1] = (groundDirection.x) / (sqrt(pow(groundDirection.x,2) + pow(groundDirection.y,2)));
+  u[2] = 0.0;
+  
+  theta = acos(groundDirection.z);
+  
+  tfQuat = {sin(theta/2)*u[0], sin(theta/2)*u[1], sin(theta/2)*u[2], cos(theta/2)};  // We need to translate this information into quaternion form
+  
+  tf::quaternionTFToMsg(tfQuat, gmQuat);
+  std::cout << msg_ground.pose << std::endl;
+  msg_ground.pose.orientation = gmQuat;
 
   extract.setInputCloud (cloudDownsampled); // Extract the planar inliers from the input cloud
   extract.setIndices (inliersGround);
@@ -208,7 +260,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   ros::param::get("delay_ng", delay_ng);
   t2 = clock();
   delay_ng = (float)(t2-t1)/CLOCKS_PER_SEC;
-  msg_ng.header.stamp = ros::Time::now() - ros::Duration(delay_ng);
+  msg_ng.header.stamp = ros::Time::now() - ros::Duration(0.0*delay_ng);
   t1 = clock();
   msg_ng.header.frame_id = "base_link";
 //////////////////////////////////////////////////////////////////////////////////////
@@ -271,7 +323,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   ros::param::get("delay_cl",delay_cl);
   t2 = clock();
   delay_cl = (float)(t2-t1)/CLOCKS_PER_SEC;
-  msg_cl.header.stamp= ros::Time::now() - ros::Duration(delay_cl);
+  msg_cl.header.stamp= ros::Time::now() - ros::Duration(0.0*delay_cl);
   t1 = clock();
   msg_cl.header.frame_id = "base_link";
     
@@ -309,14 +361,11 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   float tiltLim;
   ros::param::get("tiltLim",tiltLim);
   
-  float u[3]; // u is the normalized vector used to turn Z axis until it reaches the orientation of the vertical element, by turning theta radians. It is obtained by cross-multiplying Z-axis and the director vector of the vertical element
-  float theta;
-
+  bool logfile;
+  ros::param::get("logfile",logfile);
+  
   visualization_msgs::Marker marker_aux;
-  geometry_msgs::Pose pose;
-  tf::Quaternion q;
-  geometry_msgs::Quaternion element_orientation;
-
+  visualization_msgs::Marker cylinder_aux;
   neClusters.setSearchMethod (treeCloudCluster);
   neClusters.setKSearch (KSearchClusterFit);
   
@@ -349,15 +398,18 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
     cloudCluster->height = 1;
     cloudCluster->is_dense = true; // At this point, there is only one cluster stored in cloudCluster variable, and it will be analysed in order to being identified as a vertical element. If fitting is successful, its components will be stored
 
-    pcl::SampleConsensusModelLine<pcl::PointXYZ> fitLine (cloudCluster);
     neClusters.setInputCloud (cloudCluster);
     neClusters.compute (*cloudClusterNormals);
     segLineN.setInputCloud (cloudCluster);
     segLineN.setInputNormals (cloudClusterNormals);
     segLineN.segment (*inliersLine, *coefficientsLine); // Obtain the line inliers and coefficients
+//    pcl::SampleConsensusModelLine<pcl::PointXYZ> fitLine (cloudCluster, inliersLine->indices); //We take into account only inliers of the cluster
+    pcl::SampleConsensusModelLine<pcl::PointXYZ> fitLine (cloudCluster);
 
-    //std::cout << "inliersLine->indices.size(): " << inliersLine->indices.size() << " cloudCluster->points.size(): " << cloudCluster->points.size() << endl;
-
+//    std::cout << " inliersLine->indices.size(): " << inliersLine->indices.size() << " cloudCluster->points.size(): " << cloudCluster->points.size() << std::endl;
+    
+//    std::cout << *coefficientsLine << std::endl;
+    coefficientsLine->header.frame_id = "/base_link";
     xpLine = coefficientsLine->values[0];
     ypLine = coefficientsLine->values[1];
     zpLine = coefficientsLine->values[2];
@@ -365,10 +417,11 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
     ydLine = coefficientsLine->values[4];
     zdLine = coefficientsLine->values[5];
 
-    if(coefficientsLine->values.size() != 0)
+    if(inliersLine->indices.size() != 0) // coefficientsLine->values.size() = 6 siempre
     {
       if(zdLine > cos(tiltLim*3.1415/180.0)) // less than a user-given tilt
       {
+//        std::cout << "--------------------------------------------------" << std::endl;
         coefficientsFitLine(0) = xpLine;
         coefficientsFitLine(1) = ypLine;
         coefficientsFitLine(2) = zpLine;
@@ -434,16 +487,11 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
         marker_aux.pose.position.x = xpLine;
         marker_aux.pose.position.y = ypLine;
         marker_aux.pose.position.z = zpLine + 2.0;
-        
-        std::stringstream ss;
-        ss << "Points: " << cloudCluster->points.size() << "\tError: " << error << endl << "Inliers: " << inliersLine->indices.size() << "\tRatio: " << ratio << endl << "Tilt: " << (float)acos(zdLine)*180.0/3.14 << "\tHeight: " << height << endl << "Vertical Element: " << isVerticalElement;
-        
-        marker_aux.text = ss.str();
-        marker_array_aux.markers.push_back(marker_aux);
 
-        pose.position.x = xpLine; // Line coefficients
-        pose.position.y = ypLine;
-        pose.position.z = zpLine;
+
+        pose.pose.position.x = xpLine; // Line coefficients
+        pose.pose.position.y = ypLine;
+        pose.pose.position.z = zpLine;
 
         u[0] = (-ydLine) / (sqrt(pow(xdLine,2) + pow(ydLine,2)));
         u[1] = (xdLine) / (sqrt(pow(xdLine,2) + pow(ydLine,2)));
@@ -451,17 +499,45 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
         
         theta = acos(zdLine);
         
-        q = {sin(theta/2)*u[0], sin(theta/2)*u[1], sin(theta/2)*u[2], cos(theta/2)};  // We need to translate this information into quaternion form
+        tfQuat = {sin(theta/2)*u[0], sin(theta/2)*u[1], sin(theta/2)*u[2], cos(theta/2)};  // We need to translate this information into quaternion form
         
-        tf::quaternionTFToMsg(q, element_orientation);
+        tf::quaternionTFToMsg(tfQuat, gmQuat);
         
-        pose.orientation.x = element_orientation.x; // Finally, the quaternion is introduced in the pose message, that will eventually be sent
-        pose.orientation.y = element_orientation.y;
-        pose.orientation.z = element_orientation.z;
-        pose.orientation.w = element_orientation.w;
+        pose.pose.orientation.x = gmQuat.x; // Finally, the quaternion is introduced in the pose message, that will eventually be sent
+        pose.pose.orientation.y = gmQuat.y;
+        pose.pose.orientation.z = gmQuat.z;
+        pose.pose.orientation.w = gmQuat.w;
+        
+        tf::Vector3 odom_point;
+        tf::Vector3 pose_point;
 
-        msg_aux.poses.push_back(pose);
+        pose_point[0] = xpLine;
+        pose_point[1] = ypLine;
+        pose_point[2] = zpLine;
+                
+        odom_point = transform*pose_point;
+        
+        std::stringstream ss;
+        coefficientsLine->header.frame_id = "/map";
+        ss << "Points: " << cloudCluster->points.size() << "\tError: " << error << endl << "Inliers: " << inliersLine->indices.size() << "\tRatio: " << ratio << endl << "Tilt: " << (float)acos(zdLine)*180.0/3.14 << "\tHeight: " << height << endl << "x: " << odom_point[0] << "\ty: " << odom_point[1] << endl <<"Vertical Element: " << isVerticalElement;
+        
+        marker_aux.text = ss.str();
+        marker_array_aux.markers.push_back(marker_aux);
+
+        msg_aux.poses.push_back(pose.pose);
         n++;
+        
+        if (logfile)
+        {
+          if (myfile.is_open()) // Log file
+          {
+            if(isVerticalElement)
+              myfile << 1 << ", " << odom_point[0] << ", " << odom_point[1] << std::endl;
+            else
+              myfile << 0 << ", " << odom_point[0] << ", " << odom_point[1] << std::endl;
+          }
+          else cout << "Unable to open file";
+        }
         
       } // end if(zdLine > cos(tiltLim*3.1415/180.0))
     } // end if(coefficientsLine->values.size() != 0)
@@ -471,8 +547,8 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   ros::param::get("delay_ve", delay_ve);
   t2 = clock();
   delay_ve = (float)(t2-t1)/CLOCKS_PER_SEC;
-  msg_aux.header.stamp = ros::Time::now() - ros::Duration(delay_ve);
-  msg_aux.header.frame_id = "base_link";
+  msg_aux.header.stamp = ros::Time::now() - ros::Duration(0.0*delay_ve);
+  msg_aux.header.frame_id = "/base_link";
   
   msg_ve = msg_aux; // Pass local messages to global messages, in order to be published in main
   marker_array = marker_array_aux;
@@ -486,21 +562,35 @@ main (int argc, char** argv)
   ros::init(argc, argv, "euclidean_clustering");
   ros::NodeHandle nh; 
   ros::Subscriber sub = nh.subscribe ("pointcloudmerged", 1, callback);
-  ros::Publisher pub_ve = nh.advertise<geometry_msgs::PoseArray>("PoseArray_ve", 1);
   ros::Publisher pub_ds = nh.advertise<sensor_msgs::PointCloud2>("PointCloud2_ds", 1); // debugging
-  ros::Publisher pub_cl = nh.advertise<sensor_msgs::PointCloud2>("PointCloud2_cl", 1); // debugging
+  ros::Publisher pub_ground = nh.advertise<geometry_msgs::PoseStamped>("poseGround", 1); // debugging
   ros::Publisher pub_ng = nh.advertise<sensor_msgs::PointCloud2>("PointCloud2_ng", 1); // debugging
+  ros::Publisher pub_cl = nh.advertise<sensor_msgs::PointCloud2>("PointCloud2_cl", 1); // debugging
+  ros::Publisher pub_ve = nh.advertise<geometry_msgs::PoseArray>("PoseArray_ve", 1);
   ros::Publisher pub_text = nh.advertise<visualization_msgs::MarkerArray>("MarkerArray_text", 1); // debugging
   ros::Rate loop_rate(10);
   visualization_msgs::Marker marker_main;
-  
+	static tf::TransformListener listener;
+
   while (ros::ok())
   {
     ros::spinOnce();
+    
+    try
+    {
+      listener.waitForTransform("map", "base_link", ros::Time::now(), ros::Duration(1.0));
+      listener.lookupTransform("map", "base_link", ros::Time::now(), transform);
+    }
+    catch(tf::TransformException& ex)
+    {
+      ROS_ERROR("Received an exception trying to transform: %s", ex.what());
+    }
+    
     pub_ve.publish(msg_ve);
     pub_ds.publish(msg_ds); // debugging
     pub_cl.publish(msg_cl); // debugging
     pub_ng.publish(msg_ng); // debugging
+    pub_ground.publish(msg_ground); // debugging
     pub_text.publish(marker_array); // debugging
 
     loop_rate.sleep();
@@ -509,5 +599,6 @@ main (int argc, char** argv)
     marker_array.markers.push_back(marker_main);
     pub_text.publish(marker_array); // debugging
   }
+  myfile.close();
   return(0);
 }

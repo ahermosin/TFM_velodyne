@@ -1,9 +1,0 @@
-digraph G {
-"map" -> "base_link"[label="Broadcaster: /tf_stuff\nAverage rate: 100.288 Hz\nMost recent transform: 1551271155.879 ( 0.000 sec old)\nBuffer length: 4.996 sec\n"];
-"base_link" -> "velodyne_i"[label="Broadcaster: /play_1554372663934478952\nAverage rate: 10.193 Hz\nMost recent transform: 1551271155.929 ( -0.050 sec old)\nBuffer length: 4.905 sec\n"];
-"base_link" -> "velodyne_d"[label="Broadcaster: /play_1554372663934478952\nAverage rate: 10.193 Hz\nMost recent transform: 1551271155.929 ( -0.050 sec old)\nBuffer length: 4.905 sec\n"];
-edge [style=invis];
- subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
-"Recorded at time: 1551271155.879"[ shape=plaintext ] ;
- }->"map";
-}

@@ -1,8 +1,8 @@
-leafSize: 0.15
-DistanceThresholdLine: 0.15
+leafSize: 0.25
+DistanceThresholdLine: 0.2
 
-errorMax: 0.23
-ratioMin: 0.57
+errorMax: 0.2
+ratioMin: 0.5
 
 minPointsVoxel: 1
 
@@ -22,7 +22,7 @@ delay_cl: 0.1
 delay_ve: 0.2
 
 
-logfile: false
+logfile: true
 use_sim_time: true
 
 # Cropping

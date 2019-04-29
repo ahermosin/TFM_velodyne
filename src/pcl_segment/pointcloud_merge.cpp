@@ -62,21 +62,16 @@ main (int argc, char** argv)
   float delay_merge;
   while (ros::ok())
   {
-    /*
-    ros::Time now = ros::Time::now();
-    ros::Time past = now - ros::Duration(5.0);
-    */
     
     
     ros::spinOnce();
    
     pcl_conversions::toPCL(stamp_i, cloud_i->header.stamp);
     pcl_conversions::toPCL(stamp_d, cloud_d->header.stamp);
-    //pcl_cloud.header = pcl_conversions::toPCL(pc2->header);
  
     try{
-      listener_i.lookupTransform("/base_link", "/velodyne_i", stamp_i, transform_i);
-      listener_d.lookupTransform("/base_link", "/velodyne_d", stamp_d, transform_d);
+      listener_i.lookupTransform("/base_link", "/velodyne_i", ros::Time::now(), transform_i);
+      listener_d.lookupTransform("/base_link", "/velodyne_d", ros::Time::now(), transform_d);
     }
     catch (tf::TransformException ex){
       ROS_ERROR("%s",ex.what());
