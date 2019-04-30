@@ -1,18 +1,18 @@
-leafSize: 0.12
-DistanceThresholdLine: 0.05
+leafSize: 0.08
+DistanceThresholdLine: 0.1
 
 errorMax: 0.23
-ratioMin: 0.4
+ratioMin: 0.3
 
-minPointsVoxel: 3
+minPointsVoxel: 1
 
 # Max height of vertical elements
-heightMax: 4.2
+heightMax: 2.2
 # Line verticality
 tiltLim: 10.0
 
 # Info text in RViz size
-textScale: 0.6
+textScale: 1.6
 
 
 delay_merge: 0.0
@@ -44,7 +44,7 @@ MaxIterationsGround: 50
 DistanceThresholdGround: 0.7
 
 # Euclidean clustering
-clusterTolerance: 0.48
+clusterTolerance: 0.8
 
 
 # KSearch for normals extraction in clusters

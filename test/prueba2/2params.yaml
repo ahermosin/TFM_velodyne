@@ -1,10 +1,10 @@
 leafSize: 0.12
-DistanceThresholdLine: 0.05
+DistanceThresholdLine: 0.08
 
 errorMax: 0.23
-ratioMin: 0.4
+ratioMin: 0.3
 
-minPointsVoxel: 3
+minPointsVoxel: 1
 
 # Max height of vertical elements
 heightMax: 4.2
@@ -22,7 +22,7 @@ delay_cl: 0.1
 delay_ve: 0.2
 
 
-logfile: true
+logfile: false
 use_sim_time: true
 
 # Cropping
@@ -44,7 +44,7 @@ MaxIterationsGround: 50
 DistanceThresholdGround: 0.7
 
 # Euclidean clustering
-clusterTolerance: 0.48
+clusterTolerance: 0.35
 
 
 # KSearch for normals extraction in clusters

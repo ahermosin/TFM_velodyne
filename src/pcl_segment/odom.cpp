@@ -2,6 +2,7 @@
 #include <time.h>
 #include <math.h>
 #include <tf/tf.h>
+#include <tf_conversions/tf_eigen.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/LinearMath/Quaternion.h>
@@ -51,6 +52,7 @@ main (int argc, char** argv)
   ros::Subscriber sub_dir = nh.subscribe ("/lcm_to_ros/CAN_COCHE_DIRECCION", 1, callback_dir);
   ros::Subscriber sub_ground = nh.subscribe ("poseGround", 1, callback_ground);
   ros::Publisher pub_odom_strip = nh.advertise<visualization_msgs::Marker>("odom_strip", 1); // debugging
+  ros::Publisher pub_incOdom = nh.advertise<geometry_msgs::TransformStamped>("incOdom", 1); // debugging
   ros::Rate loop_rate(100);
   
   tf::TransformBroadcaster br;
@@ -98,6 +100,20 @@ main (int argc, char** argv)
   
   tf::TransformListener listener;
   tf::StampedTransform transform;
+  tf::StampedTransform transformPrev;
+  tf::StampedTransform incOdom;
+  geometry_msgs::TransformStamped msg_incOdom;
+  
+  try{
+    listener.lookupTransform("map", "base_link",  
+                             ros::Time::now(), transform);
+  }
+  catch (tf::TransformException ex){
+    ROS_ERROR("%s",ex.what());
+    ros::Duration(1.0).sleep();
+  }
+  
+  transformPrev = transform; // initial value
   
   while (ros::ok())
   {
@@ -177,6 +193,10 @@ main (int argc, char** argv)
     transform_br.setRotation(q_br);
    // std::cout << "flag 10" << std::endl;
     
+    
+    incOdom.mult(transformPrev.inverse(),transform);
+    tf::transformStampedTFToMsg(incOdom, msg_incOdom);
+        
     br.sendTransform(tf::StampedTransform(transform_br, ros::Time::now() + ros::Duration(0.2), "map", "base_link")); //FIXME ros::Duration(0.2) due to negative time doing tf from rosbag. Remove for further implementation
  //   std::cout << "flag 11" << std::endl;
     
@@ -204,6 +224,9 @@ main (int argc, char** argv)
       znPrev = zn;
       thetaPrev = theta;
     }
+    
+    transformPrev = transform;
+    
   //  std::cout << "flag 15" << std::endl;
     //t2 = clock();
     //std::cout << "Calculated in " << 1000.0*((float)(t2-t1))/CLOCKS_PER_SEC << " ms" << std::endl;

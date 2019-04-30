@@ -209,7 +209,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   segGroundN.setInputNormals (cloudNormals);
   segGroundN.segment (*inliersGround, *coefficientsGround);
   
-  std::cout << *coefficientsGround << std::endl;
+  //std::cout << *coefficientsGround << std::endl;
   
   geometry_msgs::Vector3 groundDistance;
   geometry_msgs::Vector3 groundDirection;
@@ -246,7 +246,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   tfQuat = {sin(theta/2)*u[0], sin(theta/2)*u[1], sin(theta/2)*u[2], cos(theta/2)};  // We need to translate this information into quaternion form
   
   tf::quaternionTFToMsg(tfQuat, gmQuat);
-  std::cout << msg_ground.pose << std::endl;
+  //std::cout << msg_ground.pose << std::endl;
   msg_ground.pose.orientation = gmQuat;
 
   extract.setInputCloud (cloudDownsampled); // Extract the planar inliers from the input cloud
@@ -441,7 +441,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
             y_zMin = cloudCluster->points[k].y;
             
           }
-          else if (cloudCluster->points[k].z > zMax)
+          if (cloudCluster->points[k].z > zMax)
           {
             zMax = cloudCluster->points[k].z;
             x_zMax = cloudCluster->points[k].x;
@@ -572,9 +572,9 @@ main (int argc, char** argv)
   visualization_msgs::Marker marker_main;
 	static tf::TransformListener listener;
 
+
   while (ros::ok())
   {
-    ros::spinOnce();
     
     try
     {
@@ -585,6 +585,7 @@ main (int argc, char** argv)
     {
       ROS_ERROR("Received an exception trying to transform: %s", ex.what());
     }
+    ros::spinOnce();
     
     pub_ve.publish(msg_ve);
     pub_ds.publish(msg_ds); // debugging
@@ -598,6 +599,7 @@ main (int argc, char** argv)
     marker_main.action = visualization_msgs::Marker::DELETEALL; // To avoid dead displays on screen
     marker_array.markers.push_back(marker_main);
     pub_text.publish(marker_array); // debugging
+    
   }
   myfile.close();
   return(0);
