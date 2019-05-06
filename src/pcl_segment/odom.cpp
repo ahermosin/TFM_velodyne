@@ -208,7 +208,7 @@ main (int argc, char** argv)
   //  std::cout << "flag 13" << std::endl;
     pub_odom_strip.publish(vis_odom_strip);
   //  std::cout << "flag 14" << std::endl;
-
+    pub_incOdom.publish(msg_incOdom);
     if(abs(vel) <= 0.01) // FIXME debugging
     {
       xnPrev = 0.0;

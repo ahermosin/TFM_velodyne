@@ -30,6 +30,7 @@
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 #include "pcl_conversions/pcl_conversions.h"
+#include <pcl_ros/transforms.h>
 #include <stdexcept>
 
 #include <iostream>
@@ -56,6 +57,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   visualization_msgs::MarkerArray cylinders_aux; // Local messages definitions
 	
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloudCropped (new pcl::PointCloud<pcl::PointXYZ>), cloudDownsampled (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::fromROSMsg(*input, *cloud); // The ROS message, given as sensor_msgs::PointCloud2ConstPtr is translated to PCL type pcl::PointCloud<pcl::PointXYZ>::Ptr
   //std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl;
   
@@ -96,13 +98,16 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   ros::param::get("up_lim_z", up_lim_z);
   
   int k;
-  for(k=0; k<=cloud->points.size(); k++) // Remove the points within a cube of volume (up_lim_x - low_lim_x)m x (up_lim_y - low_lim_y)m x (up_lim_z - low_lim_z)m centered in the sensor. In order to avoid 6 comparations at a time it will be performed in three steps, saving efforts
+  
+  pcl_ros::transformPointCloud(*cloud, *cloud2, transform.inverse());
+  
+  for(k=0; k<=cloud2->points.size(); k++) // Remove the points within a cube of volume (up_lim_x - low_lim_x)m x (up_lim_y - low_lim_y)m x (up_lim_z - low_lim_z)m centered in the sensor. In order to avoid 6 comparations at a time it will be performed in three steps, saving efforts
   {
-    if(cloud->points[k].x<low_lim_x || cloud->points[k].x>up_lim_x)
+    if(cloud2->points[k].x<low_lim_x || cloud2->points[k].x>up_lim_x)
       cloudCropped->points.push_back (cloud->points[k]);
-    else if(cloud->points[k].y<low_lim_y || cloud->points[k].y>up_lim_y)
+    else if(cloud2->points[k].y<low_lim_y || cloud2->points[k].y>up_lim_y)
       cloudCropped->points.push_back (cloud->points[k]);
-    else if(cloud->points[k].z<low_lim_z || cloud->points[k].z>up_lim_z)
+    else if(cloud2->points[k].z<low_lim_z || cloud2->points[k].z>up_lim_z)
       cloudCropped->points.push_back (cloud->points[k]);
   }
   
@@ -135,7 +140,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
     vg.setMinimumPointsNumberPerVoxel(minPointsVoxel);
     vg.filter (*cloudDownsampled);
   }
-  // If downsampling is disabled (disapproved, since computation time is extremely high)
+  // If downsampling is disabled (discouraged, since computation time is extremely high)
   else
     *cloudDownsampled = *cloudCropped;
   
@@ -146,7 +151,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   delay_ds = (float)(t2-t1)/CLOCKS_PER_SEC;
   msg_ds.header.stamp = ros::Time::now() - ros::Duration(0.0*delay_ds);
   t1 = clock();
-  msg_ds.header.frame_id = "base_link"; 
+  msg_ds.header.frame_id = "map"; 
 //////////////////////////////////////////////////////////////////////////////////////
 //                                                                 CLOUD (NOT) DOWNSAMPLED
 //                                                                           |
@@ -232,7 +237,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   float u[3]; // u is the normalized vector used to turn Z axis until it reaches the orientation of the ground, by turning theta radians. It is obtained by cross-multiplying Z-axis and the director vector of the vertical element
 
   msg_ground.header.stamp = ros::Time::now();
-  msg_ground.header.frame_id = "base_link";
+  msg_ground.header.frame_id = "map";
   msg_ground.pose.position.x = groundDistance.x;
   msg_ground.pose.position.y = groundDistance.y;
   msg_ground.pose.position.z = groundDistance.z;
@@ -262,7 +267,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   delay_ng = (float)(t2-t1)/CLOCKS_PER_SEC;
   msg_ng.header.stamp = ros::Time::now() - ros::Duration(0.0*delay_ng);
   t1 = clock();
-  msg_ng.header.frame_id = "base_link";
+  msg_ng.header.frame_id = "map";
 //////////////////////////////////////////////////////////////////////////////////////
 //                                                                 CLOUD WITHOUT GROUND
 //                                                                           |
@@ -325,7 +330,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   delay_cl = (float)(t2-t1)/CLOCKS_PER_SEC;
   msg_cl.header.stamp= ros::Time::now() - ros::Duration(0.0*delay_cl);
   t1 = clock();
-  msg_cl.header.frame_id = "base_link";
+  msg_cl.header.frame_id = "map";
     
   float textScale;
   ros::param::get("textScale", textScale);
@@ -376,7 +381,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   segLineN.setMaxIterations (MaxIterationsLine);
   segLineN.setDistanceThreshold (DistanceThresholdLine);
 
-  marker_aux.header.frame_id = "/base_link";
+  marker_aux.header.frame_id = "/map";
   marker_aux.ns = "error_display";
   marker_aux.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
   marker_aux.action = visualization_msgs::Marker::ADD;
@@ -409,7 +414,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
 //    std::cout << " inliersLine->indices.size(): " << inliersLine->indices.size() << " cloudCluster->points.size(): " << cloudCluster->points.size() << std::endl;
     
 //    std::cout << *coefficientsLine << std::endl;
-    coefficientsLine->header.frame_id = "/base_link";
+    coefficientsLine->header.frame_id = "/map";
     xpLine = coefficientsLine->values[0];
     ypLine = coefficientsLine->values[1];
     zpLine = coefficientsLine->values[2];
@@ -508,18 +513,16 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
         pose.pose.orientation.z = gmQuat.z;
         pose.pose.orientation.w = gmQuat.w;
         
-        tf::Vector3 odom_point;
         tf::Vector3 pose_point;
 
         pose_point[0] = xpLine;
         pose_point[1] = ypLine;
         pose_point[2] = zpLine;
                 
-        odom_point = transform*pose_point;
         
         std::stringstream ss;
         coefficientsLine->header.frame_id = "/map";
-        ss << "Points: " << cloudCluster->points.size() << "\tError: " << error << endl << "Inliers: " << inliersLine->indices.size() << "\tRatio: " << ratio << endl << "Tilt: " << (float)acos(zdLine)*180.0/3.14 << "\tHeight: " << height << endl << "x: " << odom_point[0] << "\ty: " << odom_point[1] << endl <<"Vertical Element: " << isVerticalElement;
+        ss << "Points: " << cloudCluster->points.size() << "\tError: " << error << endl << "Inliers: " << inliersLine->indices.size() << "\tRatio: " << ratio << endl << "Tilt: " << (float)acos(zdLine)*180.0/3.14 << "\tHeight: " << height << endl << "x: " << pose_point[0] << "\ty: " << pose_point[1] << endl <<"Vertical Element: " << isVerticalElement;
         
         marker_aux.text = ss.str();
         marker_array_aux.markers.push_back(marker_aux);
@@ -532,9 +535,9 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
           if (myfile.is_open()) // Log file
           {
             if(isVerticalElement)
-              myfile << 1 << ", " << odom_point[0] << ", " << odom_point[1] << std::endl;
+              myfile << 1 << ", " << pose_point[0] << ", " << pose_point[1] << std::endl;
             else
-              myfile << 0 << ", " << odom_point[0] << ", " << odom_point[1] << std::endl;
+              myfile << 0 << ", " << pose_point[0] << ", " << pose_point[1] << std::endl;
           }
           else cout << "Unable to open file";
         }
@@ -548,7 +551,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   t2 = clock();
   delay_ve = (float)(t2-t1)/CLOCKS_PER_SEC;
   msg_aux.header.stamp = ros::Time::now() - ros::Duration(0.0*delay_ve);
-  msg_aux.header.frame_id = "/base_link";
+  msg_aux.header.frame_id = "/map";
   
   msg_ve = msg_aux; // Pass local messages to global messages, in order to be published in main
   marker_array = marker_array_aux;
@@ -561,7 +564,7 @@ main (int argc, char** argv)
 {
   ros::init(argc, argv, "euclidean_clustering");
   ros::NodeHandle nh; 
-  ros::Subscriber sub = nh.subscribe ("pointcloudmerged", 1, callback);
+  ros::Subscriber sub = nh.subscribe ("pointcloudcollected", 1, callback);
   ros::Publisher pub_ds = nh.advertise<sensor_msgs::PointCloud2>("PointCloud2_ds", 1); // debugging
   ros::Publisher pub_ground = nh.advertise<geometry_msgs::PoseStamped>("poseGround", 1); // debugging
   ros::Publisher pub_ng = nh.advertise<sensor_msgs::PointCloud2>("PointCloud2_ng", 1); // debugging
@@ -570,7 +573,7 @@ main (int argc, char** argv)
   ros::Publisher pub_text = nh.advertise<visualization_msgs::MarkerArray>("MarkerArray_text", 1); // debugging
   ros::Rate loop_rate(10);
   visualization_msgs::Marker marker_main;
-	static tf::TransformListener listener;
+	tf::TransformListener listener;
 
 
   while (ros::ok())

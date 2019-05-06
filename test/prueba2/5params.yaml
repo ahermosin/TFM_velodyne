@@ -1,0 +1,64 @@
+leafSize: 0.12
+DistanceThresholdLine: 0.05
+
+errorMax: 0.3
+ratioMin: 0.2
+
+minPointsVoxel: 3
+
+# Max height of vertical elements
+heightMax: 4.2
+# Line verticality
+tiltLim: 10.0
+
+# Info text in RViz size
+textScale: 1.5
+
+
+delay_merge: 0.0
+delay_ds: 0.2
+delay_ng: 0.1
+delay_cl: 0.1
+delay_ve: 0.2
+
+
+logfile: true
+use_sim_time: true
+
+# Cropping
+low_lim_x: -2.0
+low_lim_y: -2.0
+low_lim_z: -2.0
+up_lim_x: 2.0
+up_lim_y: 2.0
+up_lim_z: 2.0
+
+# Downsampling
+do_downsampling: true
+
+# Ground extraction
+KSearchGround: 15
+OptimizeCoefficientsGround: true
+NormalDistanceWeightGround: 0.1
+MaxIterationsGround: 50
+DistanceThresholdGround: 0.7
+
+# Euclidean clustering
+clusterTolerance: 0.48
+
+
+# KSearch for normals extraction in clusters
+KSearchClusterFit: 10
+
+# Line fitting
+OptimizeCoefficientsLine: true
+NormalDistanceWeightLine: 0.01
+MaxIterationsLine: 1000
+
+
+# Car
+lidarHeight: 1.9 #m
+turnRate: 16.36
+angleOffset: -9.5 #-10.0
+wheelsA: 1.5
+wheelsL: 2.464

@@ -66,8 +66,8 @@ main (int argc, char** argv)
     
     ros::spinOnce();
    
-    pcl_conversions::toPCL(stamp_i, cloud_i->header.stamp);
-    pcl_conversions::toPCL(stamp_d, cloud_d->header.stamp);
+   // pcl_conversions::toPCL(stamp_i, cloud_i->header.stamp);
+   // pcl_conversions::toPCL(stamp_d, cloud_d->header.stamp);
  
     try{
       listener_i.lookupTransform("/base_link", "/velodyne_i", ros::Time::now(), transform_i);
@@ -78,14 +78,14 @@ main (int argc, char** argv)
       ros::Duration(1.0).sleep();
     }
         
-    pcl::toROSMsg(*cloud_i, mensaje_i);
-    pcl::toROSMsg(*cloud_d, mensaje_d);
+    //pcl::toROSMsg(*cloud_i, mensaje_i);
+    //pcl::toROSMsg(*cloud_d, mensaje_d);
     
     pcl_ros::transformPointCloud(*cloud_i, *cloud_i2, transform_i);
     pcl_ros::transformPointCloud(*cloud_d, *cloud_d2, transform_d);
     
-    pcl::fromROSMsg(mensaje_i, *cloud_i);
-    pcl::fromROSMsg(mensaje_d, *cloud_d);
+    //pcl::fromROSMsg(mensaje_i, *cloud_i);
+    //pcl::fromROSMsg(mensaje_d, *cloud_d);
     *cloud = *cloud_i2 + *cloud_d2;
 
     pcl::toROSMsg(*cloud, mensaje);

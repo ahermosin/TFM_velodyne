@@ -2,8 +2,10 @@
 % successn xn yn
 % successn: bool meaning that n-th object meets the criteria of a vertical element
 % [xn yn]: float coordinates of the n-th object
-P = load('test/prueba2/3logFile.txt');
-%P = load("logFile.txt");
+
+%P = load('test/prueba1/6logFile.txt');
+P = load("logFile.txt");
+
 figure
 hold on
 for i=1:length(P)
