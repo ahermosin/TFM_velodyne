@@ -20,7 +20,7 @@ ylim([-20 50])
 grid
 
 % Check identifications around ground truth values of object locations
-veMap = load("veMap2.yaml");
+veMap = load("veMap1.yaml");
 radius = 0.5;
 
 theta = linspace(0,2*pi);

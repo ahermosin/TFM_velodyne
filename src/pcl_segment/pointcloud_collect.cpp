@@ -21,6 +21,11 @@ std::vector < pcl::PointCloud<pcl::PointXYZ>::Ptr > clouds = {};
 
 tf::StampedTransform transform;
 
+void callback_tf(const geometry_msgs::TransformStamped input)
+{
+  tf::transformStampedMsgToTF(input, transform);
+}
+
 void callback(const sensor_msgs::PointCloud2ConstPtr& input)
 {
   ros::param::get("nCollect", nCollect); // debugging
@@ -71,8 +76,10 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
 	}
 		  	//std::cout << "flag 1g" << std::endl;
 
+  //pcl_ros::transformPointCloud(*cloudCollect, *cloudCollect, transform);
 	pcl::toROSMsg(*cloudCollect, PCMessage);
 		  //	std::cout << "flag 1h" << std::endl;
+		  
 
 } 
 
@@ -85,6 +92,7 @@ main (int argc, char** argv)
   ros::init(argc, argv, "point_cloud_collect");
   ros::NodeHandle nh;
   ros::Subscriber sub = nh.subscribe ("/pointcloudmerged", 1, callback);
+  ros::Subscriber sub_tf = nh.subscribe ("/incOdom", 1, callback_tf);
   ros::Publisher chatter_pub = nh.advertise<sensor_msgs::PointCloud2>("pointcloudcollected", 1);
   ros::Rate loop_rate(10);
     
@@ -96,7 +104,7 @@ main (int argc, char** argv)
   {
     
     ros::spinOnce();
-    
+    /*
     try{
     listener.lookupTransform("map", "base_link",  
                              ros::Time::now(), transform);
@@ -105,7 +113,7 @@ main (int argc, char** argv)
       ROS_ERROR("%s",ex.what());
       ros::Duration(1.0).sleep();
     }
-
+    */
    
     //pcl_conversions::toPCL(stamp_d, cloud_d->header.stamp);
  

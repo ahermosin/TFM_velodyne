@@ -59,6 +59,7 @@ main (int argc, char** argv)
       
   tf::StampedTransform transform_i;
   tf::StampedTransform transform_d;
+  tf::StampedTransform transform;
   float delay_merge;
   while (ros::ok())
   {
@@ -70,8 +71,9 @@ main (int argc, char** argv)
    // pcl_conversions::toPCL(stamp_d, cloud_d->header.stamp);
  
     try{
-      listener_i.lookupTransform("/base_link", "/velodyne_i", ros::Time::now(), transform_i);
+      listener_i.lookupTransform("/base_link", "/velodyne_i", ros::Time::now(), transform_i); // Not necessarily inside the loop?
       listener_d.lookupTransform("/base_link", "/velodyne_d", ros::Time::now(), transform_d);
+      listener_d.lookupTransform("/map", "/base_link", ros::Time::now(), transform);
     }
     catch (tf::TransformException ex){
       ROS_ERROR("%s",ex.what());
@@ -88,8 +90,10 @@ main (int argc, char** argv)
     //pcl::fromROSMsg(mensaje_d, *cloud_d);
     *cloud = *cloud_i2 + *cloud_d2;
 
+    pcl_ros::transformPointCloud(*cloud, *cloud, transform);
+
     pcl::toROSMsg(*cloud, mensaje);
-    mensaje.header.frame_id = "base_link";
+    mensaje.header.frame_id = "map";
     mensaje.header.stamp = ros::Time::now() - ros::Duration(delay_merge); //CUIDAO AQUÍ
 //    mensaje.header.stamp = ros::Time::now(); //CUIDAO AQUÍ
     chatter_pub.publish(mensaje);

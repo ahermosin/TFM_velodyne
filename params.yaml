@@ -8,10 +8,15 @@ minPointsVoxel: 2
 
 nCollect: 3
 
+# Subscription of euclidean_clustering to either "pointcloudcollected" or "pointcloudmerged" directly
+subscription: pointcloudcollected
+
 # Max height of vertical elements
 heightMax: 4.2
 # Line verticality
 tiltLim: 10.0
+
+logfile: true
 
 # Info text in RViz size
 textScale: 1.0
@@ -24,7 +29,6 @@ delay_cl: 0.0
 delay_ve: 0.0
 
 
-logfile: false
 use_sim_time: true
 
 # Cropping
