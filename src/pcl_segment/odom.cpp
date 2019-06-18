@@ -8,17 +8,17 @@
 #include <tf/LinearMath/Quaternion.h>
 #include <boost/foreach.hpp>
 #include "sensor_msgs/PointCloud2.h"
-#include "nav_msgs/Path.h"
 #include "geometry_msgs/PoseStamped.h"
-#include "geometry_msgs/PolygonStamped.h"
-#include "geometry_msgs/Polygon.h"
 #include "geometry_msgs/Pose.h"
-#include <geometry_msgs/PoseArray.h>
 #include <visualization_msgs/Marker.h>
-#include <visualization_msgs/MarkerArray.h>
 #include <lcm_to_ros/can_coche_direccion.h>
 #include <lcm_to_ros/can_coche_velocidad.h>
+#include <customFunctions.h>
 
+#include <iostream>
+#include <fstream>
+
+std::ofstream myfile ("logOdom.txt");
 float vel;
 float dir, turnRate, angleOffset;
 geometry_msgs::PoseStamped poseGround;
@@ -52,17 +52,47 @@ main (int argc, char** argv)
   ros::Subscriber sub_dir = nh.subscribe ("/lcm_to_ros/CAN_COCHE_DIRECCION", 1, callback_dir);
   ros::Subscriber sub_ground = nh.subscribe ("poseGround", 1, callback_ground);
   ros::Publisher pub_odom_strip = nh.advertise<visualization_msgs::Marker>("odom_strip", 1); // debugging
-  ros::Publisher pub_incOdom = nh.advertise<geometry_msgs::TransformStamped>("incOdom", 1); // debugging
-  ros::Rate loop_rate(100);
+  ros::Publisher pub_incOdom = nh.advertise<geometry_msgs::TransformStamped>("incOdom", 50); // debugging
+  ros::Publisher pub_incPositionOdom = nh.advertise<pcl_segment::positionRPY>("incPositionOdom", 1); // debugging
+  float loopRate = 10.0;
+  ros::Rate loop_rate(loopRate);
   
   tf::TransformBroadcaster br;
   tf::Transform transform_br;
+  tf::Transform transform_brPrev;
   tf::Quaternion q_br;
 
+  bool tfEKF;
+  bool logfile;
+
   geometry_msgs::PoseStamped pose;
+  geometry_msgs::PoseStamped posePrev;
+  geometry_msgs::PoseStamped incPose;
+  
+  pcl_segment::positionRPY odomPos;
+  pcl_segment::positionRPY odomPosPrev;
+  pcl_segment::positionRPY incOdomPos;
+  
   geometry_msgs::Point point_aux;
   visualization_msgs::Marker vis_odom_strip;
-  visualization_msgs::Marker marker_aux;
+
+  pose.header.frame_id = "map";
+  
+  posePrev.pose.position.x = 0.0;
+  posePrev.pose.position.y = 0.0;
+  posePrev.pose.position.z = 0.0;
+  posePrev.pose.orientation.x = 0.0;
+  posePrev.pose.orientation.y = 0.0;
+  posePrev.pose.orientation.z = 0.0;
+  posePrev.pose.orientation.w = 1.0;
+  posePrev.header.frame_id = "map";
+
+  odomPosPrev.x = 0.0;
+  odomPosPrev.y = 0.0;
+  odomPosPrev.z = 0.0;
+  odomPosPrev.roll = 0.0;
+  odomPosPrev.pitch = 0.0;
+  odomPosPrev.yaw = 0.0;
   
   vis_odom_strip.type = visualization_msgs::Marker::LINE_STRIP;
   vis_odom_strip.action = visualization_msgs::Marker::ADD;
@@ -76,21 +106,13 @@ main (int argc, char** argv)
   vis_odom_strip.color.b = 1.0;
   vis_odom_strip.color.a = 1.0;
   
-  float dT = 0.01;
-  float xn, yn, zn, theta, xnPrev, ynPrev, znPrev, thetaPrev, h;
+  float dT = 1.0/loopRate;
+  float theta, thetaPrev;
   float wheelsL, wheelsA;
-  float deltaD1, deltaD2, deltaD;
   float dirPrev=0.0;
   float lidarHeight;
-  xn = 0.0;
-  yn = 0.0;
-  zn = 0.0;
   theta = 0.0;
-  xnPrev = 0.0;
-  ynPrev = 0.0;
-  znPrev = 0.0;
   thetaPrev = 0.0;
-  ros::param::get("turnRate", turnRate);
   
   //clock_t t1, t2;
   
@@ -102,11 +124,15 @@ main (int argc, char** argv)
   tf::StampedTransform transform;
   tf::StampedTransform transformPrev;
   tf::StampedTransform incOdom;
+  tf::StampedTransform transform_br_msg;
+  tf::StampedTransform transform_br_msgPrev;
   geometry_msgs::TransformStamped msg_incOdom;
+  geometry_msgs::TransformStamped msg_incOdomPrev;
+  msg_incOdom.header.frame_id = "map";
+  msg_incOdomPrev.header.frame_id = "map";
   
   try{
-    listener.lookupTransform("map", "base_link",  
-                             ros::Time::now(), transform);
+    listener.lookupTransform("map", "base_link", ros::Time::now(), transform);
   }
   catch (tf::TransformException ex){
     ROS_ERROR("%s",ex.what());
@@ -117,14 +143,14 @@ main (int argc, char** argv)
   
   while (ros::ok())
   {
-    //t1 = clock();
     ros::param::get("turnRate", turnRate); // debugging
     ros::param::get("wheelsL", wheelsL); // debugging
     ros::param::get("wheelsA", wheelsA); // debugging
     ros::param::get("lidarHeight", lidarHeight);
-   // std::cout << "flag 0" << std::endl;
-    ros::spinOnce();
-    //std::cout << "flag 1" << std::endl;
+    ros::param::get("tfEKF",tfEKF);
+    ros::param::get("logfile",logfile);
+//    ros::spinOnce();
+    
     try{
       listener.lookupTransform("map", "base_link",  
                                ros::Time::now(), transform);
@@ -134,44 +160,20 @@ main (int argc, char** argv)
       ros::Duration(1.0).sleep();
     }
     
-    //std::cout << "flag 2" << std::endl;
+    theta = thetaPrev + vel*dT/wheelsL*tan(dir); // --------------> Ackermann's model
     
-    theta = thetaPrev + vel*dT/wheelsL*tan(dir);
-    // Esto siguiente está mal?
-    /*
-    h = wheelsL/tan(dir) + wheelsA/2.0;
+    pose.pose.position.x = posePrev.pose.position.x + vel*dT*cos(theta); // --------------> Ackermann's model
+    pose.pose.position.y = posePrev.pose.position.y + vel*dT*sin(theta); // --------------> Ackermann's model
     
-    deltaD1 = (dir - dirPrev) * (h - wheelsA);
-    deltaD2 = (dir - dirPrev) * (h);
-        
-    deltaD = (dir - dirPrev) * (h - wheelsA/2.0);
-    
-    xn = xnPrev + vel*dT*cos(theta);
-    yn = ynPrev + vel*dT*sin(theta);
-    */
-    
-    xn = xnPrev + vel*dT*cos(theta);
-    yn = ynPrev + vel*dT*sin(theta);
-    zn = (lidarHeight-poseGround.pose.position.z)*0.0;
-    //std::cout << "lidarHeight: " << lidarHeight << "\tposeGroundz: " << poseGround.pose.position.z << std::endl;
-    
-    pose.header.frame_id = "base_link";
+    pose.pose.position.z = (lidarHeight-poseGround.pose.position.z)*0.0;
     pose.header.stamp = ros::Time::now();
     
-   // std::cout << "flag 3" << std::endl;
-    pose.pose.position.x = xn;
-    pose.pose.position.y = yn;
-    pose.pose.position.z = zn*0.0;
     
-   // std::cout << "flag 4" << std::endl;
-    
-    u[0] = 0.0;
+    u[0] = 0.0; // --------------> Approximation. Absolutely flat ground hypothesis
     u[1] = 0.0;
     u[2] = 1.0;
     
-    thetaq = theta;
-    
-    q = {sin(thetaq/2)*u[0], sin(thetaq/2)*u[1], sin(thetaq/2)*u[2], cos(thetaq/2)};  // We need to translate this information into quaternion form
+    q = {sin(theta/2)*u[0], sin(theta/2)*u[1], sin(theta/2)*u[2], cos(theta/2)};  // We need to translate this information into quaternion form
     
     tf::quaternionTFToMsg(q, orientation_aux);
     
@@ -180,58 +182,106 @@ main (int argc, char** argv)
     pose.pose.orientation.z = orientation_aux.z;
     pose.pose.orientation.w = orientation_aux.w;
     
-   // std::cout << "flag 5" << std::endl;
-    //pose.pose.orientation = poseGround.pose.orientation;
-   // std::cout << "flag 6" << std::endl;
-    
-    std::cout << pose << std::endl;
-  //  std::cout << "flag 7" << std::endl;
     transform_br.setOrigin(tf::Vector3(pose.pose.position.x, pose.pose.position.y, 0.0*pose.pose.position.z));
- //   std::cout << "flag 8" << std::endl;
     tf::quaternionMsgToTF(pose.pose.orientation, q_br);
-   // std::cout << "flag 9" << std::endl;
     transform_br.setRotation(q_br);
-   // std::cout << "flag 10" << std::endl;
     
+    incOdom.mult(transformPrev.inverse(),transform); // -----------------------> incOdom calculation as Transform
     
-    incOdom.mult(transformPrev.inverse(),transform);
     tf::transformStampedTFToMsg(incOdom, msg_incOdom);
-        
-    br.sendTransform(tf::StampedTransform(transform_br, ros::Time::now() + ros::Duration(0.2), "map", "base_link")); //FIXME ros::Duration(0.2) due to negative time doing tf from rosbag. Remove for further implementation
- //   std::cout << "flag 11" << std::endl;
     
+//    tf::transformTFToMsg(transform_brPrev, transform_br_msgPrev);
+//    tf::transformTFToMsg(transform_br, transform_br_msg);
+    
+    br.sendTransform(tf::StampedTransform(transform_br, ros::Time::now() + ros::Duration(0.2), "map", "odom")); //FIXME ros::Duration(0.2) due to negative time doing tf from rosbag. Remove for further implementation
+    
+    transform_br.setOrigin(tf::Vector3(0.0, 0.0, 0.0));
+    transform_br.setRotation(tf::Quaternion(tfScalar(0.0), tfScalar(0.0), tfScalar(0.0), tfScalar(1.0)));
+    
+    if(!tfEKF)
+      br.sendTransform(tf::StampedTransform(transform_br, ros::Time::now() + ros::Duration(0.2), "odom", "base_link"));
+    
+    odomPos.x = odomPosPrev.x + vel*dT*cos(theta);    
+    odomPos.y = odomPosPrev.y + vel*dT*sin(theta);    
+    odomPos.z = 0.0; // --------------> Approximation. Absolutely flat ground hypothesis
+    tf::Matrix3x3 quaternionToRPY(q);
+    quaternionToRPY.getRPY(odomPos.yaw, odomPos.pitch, odomPos.roll);    
+    
+    
+    msg_incOdom.header.stamp = ros::Time::now();
+    msg_incOdomPrev.header.stamp = ros::Time::now();
+        
+    std::cout << "msg_incOdomPrev:" << std::endl << msg_incOdomPrev << std::endl;
+    std::cout << "msg_incOdom:" << std::endl << msg_incOdom << std::endl;
+    
+    pub_incOdom.publish(msg_incOdom);
+    incOdomPos.stamp = ros::Time::now();
+    pub_incPositionOdom.publish(incOdomPos);
+    
+    incOdomPos = Comp(coordRPY(createHomogMatrInv(odomPosPrev)), odomPos); // -------------------------> incOdomPos calculation as pcl_segment::positionRPY
+    
+    
+    transform_br.setOrigin(tf::Vector3(incOdomPos.x, incOdomPos.y, 0.0));
+    transform_br.setRotation(q);    
+    
+    std::cout << "posePrev:" << std::endl << posePrev << std::endl;
+    std::cout << "pose:" << std::endl << pose << std::endl;
+    
+    br.sendTransform(tf::StampedTransform(transform_br, ros::Time::now() + ros::Duration(0.2), "base_link", "base_link_fut")); //FIXME ros::Duration(0.2) due to negative time doing tf from rosbag. Remove for further implementation
+
+        
     point_aux.x = pose.pose.position.x;
     point_aux.y = pose.pose.position.y;
     point_aux.z = 1.0*pose.pose.position.z;
- //   std::cout << "flag 12" << std::endl;
     vis_odom_strip.points.push_back(point_aux);
-  //  std::cout << "flag 13" << std::endl;
-    pub_odom_strip.publish(vis_odom_strip);
-  //  std::cout << "flag 14" << std::endl;
-    pub_incOdom.publish(msg_incOdom);
-    if(abs(vel) <= 0.01) // FIXME debugging
+    
+    if (logfile)
     {
-      xnPrev = 0.0;
-      ynPrev = 0.0;
-      znPrev = 0.0;
+      if (myfile.is_open()) // Log file
+      {
+        myfile << point_aux.x << ", " << point_aux.y << std::endl;
+      }
+      else std::cout << "Unable to open file";
+    }
+    
+
+    pub_odom_strip.publish(vis_odom_strip);
+    
+
+    if(pose.header.stamp < posePrev.header.stamp) // FIXME debugging
+    {
+      posePrev.header.stamp = pose.header.stamp;
+      posePrev.pose = pose.pose;
+      msg_incOdomPrev = msg_incOdom;
+      transform_brPrev = transform_br;
+      posePrev.pose.position.x = 0.0;
+      posePrev.pose.position.y = 0.0;
+      posePrev.pose.position.x = 0.0;
+      posePrev.pose.orientation.x = 0.0;
+      posePrev.pose.orientation.y = 0.0;
+      posePrev.pose.orientation.z = 0.0;
+      posePrev.pose.orientation.w = 1.0;
+      
+      odomPosPrev.x = 0.0;
+      odomPosPrev.y = 0.0;
+      odomPosPrev.z = 0.0;
+      odomPosPrev.roll = 0.0;
+      odomPosPrev.pitch = 0.0;
+      odomPosPrev.yaw = 0.0;
+      
       thetaPrev = 0.0;
       vis_odom_strip.points = {};
     } else
     {
+      msg_incOdomPrev = msg_incOdom;
+      posePrev.pose = pose.pose;
+      posePrev.header.stamp = pose.header.stamp;
       dirPrev = dir;
-      xnPrev = xn;
-      ynPrev = yn;
-      znPrev = zn;
       thetaPrev = theta;
+      transformPrev = transform;
     }
-    
-    transformPrev = transform;
-    
-  //  std::cout << "flag 15" << std::endl;
-    //t2 = clock();
-    //std::cout << "Calculated in " << 1000.0*((float)(t2-t1))/CLOCKS_PER_SEC << " ms" << std::endl;
+    ros::spinOnce();
     loop_rate.sleep();
-  //  std::cout << "flag 16" << std::endl;
   }
   return(0);
 }

@@ -1,25 +1,39 @@
-leafSize: 0.1
-DistanceThresholdLine: 0.15
-
-errorMax: 0.3
-ratioMin: 0.2
-
-minPointsVoxel: 2
-
-nCollect: 3
-
-# Subscription of euclidean_clustering to either "pointcloudcollected" or "pointcloudmerged" directly
-subscription: pointcloudcollected
-
-# Max height of vertical elements
+# Constraints to acceptance of vertical elements
+errorMax: 0.13
+ratioMin: 0.4
+## Max height of vertical elements
 heightMax: 4.2
-# Line verticality
+## Line verticality
 tiltLim: 10.0
 
-logfile: true
+
+# Voxelgrid
+leafSize: 0.1
+minPointsVoxel: 2
+
+# Fitting max distance
+DistanceThresholdLine: 0.15
+
+# Pointcloud collect n
+nCollect: 5
+
+# Subscription of euclidean_clustering to either "pointcloudcollected" or "pointcloudmerged" directly
+subscription: pointcloudmerged
+
+# Mahalanobis distance threshold
+mahalanobisDistanceThreshold: 50.0
+
+# Test number (1 or 2)
+test: 1
+
+# Generate log files from vertical elements, odometry, GPS or EKF
+logfile: false
+
+# When 'false', tf is map -> odom -> base_link. When true, tf is map -> ekf -> base_link
+tfEKF: true
 
 # Info text in RViz size
-textScale: 1.0
+textScale: 0.5
 
 
 delay_merge: 0.0
@@ -61,10 +75,10 @@ OptimizeCoefficientsLine: true
 NormalDistanceWeightLine: 0.01
 MaxIterationsLine: 1000
 
-
 # Car
-lidarHeight: 1.9 #m
-turnRate: 16.36
-angleOffset: -9.5 #-10.0
-wheelsA: 1.5
-wheelsL: 2.464
+lidarHeight: 1.9 #1.9 m
+turnRate: 21.0 #21
+angleOffset: -9.75 #-9.75
+wheelsA: 1.7 #1.7
+wheelsL: 2.46 #2.46
+

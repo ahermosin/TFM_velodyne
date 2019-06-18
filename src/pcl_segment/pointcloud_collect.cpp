@@ -20,6 +20,7 @@ int nCollect, nCollectPrev;
 std::vector < pcl::PointCloud<pcl::PointXYZ>::Ptr > clouds = {};
 
 tf::StampedTransform transform;
+tf::StampedTransform transform2;
 
 void callback_tf(const geometry_msgs::TransformStamped input)
 {
@@ -34,7 +35,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
 	//std::cout << "flag 0" << std::endl;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_2 (new pcl::PointCloud<pcl::PointXYZ>);
 	  
-  pcl_ros::transformPointCloud(*cloud, *cloud_2, transform);
+	pcl_ros::transformPointCloud(*cloud, *cloud_2, transform.inverse());
 
   
 	if(nCollect == nCollectPrev)
@@ -104,16 +105,16 @@ main (int argc, char** argv)
   {
     
     ros::spinOnce();
-    /*
+    
     try{
     listener.lookupTransform("map", "base_link",  
-                             ros::Time::now(), transform);
+                             ros::Time::now(), transform2);
     }
     catch (tf::TransformException ex){
       ROS_ERROR("%s",ex.what());
       ros::Duration(1.0).sleep();
     }
-    */
+    
    
     //pcl_conversions::toPCL(stamp_d, cloud_d->header.stamp);
  
@@ -124,7 +125,8 @@ main (int argc, char** argv)
     //*cloud = *cloud_i2 + *cloud_d2;
 
     //pcl::toROSMsg(*cloud, mensaje);
-    PCMessage.header.frame_id = "map";
+    pcl_ros::transformPointCloud(*cloudCollect, *cloudCollect, transform2.inverse());
+    PCMessage.header.frame_id = "base_link";
     PCMessage.header.stamp = ros::Time::now();
     chatter_pub.publish(PCMessage);
     loop_rate.sleep();

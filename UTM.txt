@@ -1,0 +1,19 @@
+prueba1.bag
+UTM_init:                   UTM_inc:              odom_init:
+  x = 458912.681012           Ax = 0.0              x = 0.0
+  y = 4462541.24317           Ay = 0.0              y = 0.0
+
+UTM_fin:                    UTM_inc:              odom_fin:
+  x = 459023.92018            Ax = 111.239168       x = 110.213
+  y = 4462530.11009           Ay = -11.13308        y = 4.33772
+
+------------------------
+
+prueba2.bag
+UTM_init:                   UTM_inc:              odom_init:
+  x = 458919.557116           Ax = 0.0              x = 0.0
+  y = 4462540.02162           Ay = 0.0              y = 0.0
+
+UTM_fin:                    UTM_inc               odom_fin:
+  x = 459031.677558           Ax = 112.120442       x = 111.546
+  y = 4462529.47585           Ay = -0.63424         y = -1.30479

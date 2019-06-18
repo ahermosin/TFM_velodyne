@@ -91,9 +91,9 @@ endif()
 # flag project as catkin-based to distinguish if a find_package()-ed project is a catkin project
 set(pcl_segment_FOUND_CATKIN_PROJECT TRUE)
 
-if(NOT " " STREQUAL " ")
+if(NOT "/home/alberto/workspaces/workspace14diciembre/devel/include " STREQUAL " ")
   set(pcl_segment_INCLUDE_DIRS "")
-  set(_include_dirs "")
+  set(_include_dirs "/home/alberto/workspaces/workspace14diciembre/devel/include")
   if(NOT " " STREQUAL " ")
     set(_report "Check the issue tracker '' and consider creating a ticket if the problem has not been reported yet.")
   elseif(NOT " " STREQUAL " ")
@@ -116,7 +116,7 @@ if(NOT " " STREQUAL " ")
   endforeach()
 endif()
 
-set(libraries "")
+set(libraries "customFunctions")
 foreach(library ${libraries})
   # keep build configuration keywords, target names and absolute libraries as-is
   if("${library}" MATCHES "^(debug|optimized|general)$")
@@ -154,7 +154,7 @@ foreach(library ${libraries})
   endif()
 endforeach()
 
-set(pcl_segment_EXPORTED_TARGETS "")
+set(pcl_segment_EXPORTED_TARGETS "pcl_segment_generate_messages_cpp;pcl_segment_generate_messages_eus;pcl_segment_generate_messages_lisp;pcl_segment_generate_messages_nodejs;pcl_segment_generate_messages_py")
 # create dummy targets for exported code generation targets to make life of users easier
 foreach(t ${pcl_segment_EXPORTED_TARGETS})
   if(NOT TARGET ${t})
@@ -191,7 +191,7 @@ foreach(depend ${depends})
   list(APPEND pcl_segment_EXPORTED_TARGETS ${${pcl_segment_dep}_EXPORTED_TARGETS})
 endforeach()
 
-set(pkg_cfg_extras "")
+set(pkg_cfg_extras "pcl_segment-msg-extras.cmake")
 foreach(extra ${pkg_cfg_extras})
   if(NOT IS_ABSOLUTE ${extra})
     set(extra ${pcl_segment_DIR}/${extra})
