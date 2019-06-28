@@ -3,6 +3,6 @@ prefix=/home/alberto/workspaces/workspace14diciembre/devel
 Name: pcl_segment
 Description: Description of pcl_segment
 Version: 0.0.0
-Cflags: -I/home/alberto/workspaces/workspace14diciembre/devel/include
-Libs: -L/home/alberto/workspaces/workspace14diciembre/devel/lib -lcustomFunctions
+Cflags: -I/home/alberto/workspaces/workspace14diciembre/devel/include -I/home/alberto/workspaces/workspace14diciembre/src/pcl_segment/include -I/usr/include
+Libs: -L/home/alberto/workspaces/workspace14diciembre/devel/lib -lcustomFunctions /usr/lib/x86_64-linux-gnu/libtinyxml.so
 Requires: 

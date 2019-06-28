@@ -23,13 +23,9 @@
 #include <fstream>
 #include "pugixml.hpp"
 
-//std::ofstream myfile ("logGPS.txt");
 FILE * myfile;
-//std_msgs::Float64 GPS_x_init, GPS_y_init, GPS_z_init;
+FILE * myfileRaw;
 double GPS_x_init, GPS_y_init, GPS_z_init;
-//const double GPS_x_init = 0.0;
-//const double GPS_y_init = 0.0;
-//const double GPS_z_init = 0.0;
 
 bool init;
 lcm_to_ros::gps_data GPSData;
@@ -68,7 +64,7 @@ main (int argc, char** argv)
   GPSStrip.id = 0;
   GPSStrip.pose.orientation.w = 1.0;
   GPSStrip.scale.x = 0.1;
-  GPSStrip.color.r = 1.0;
+  GPSStrip.color.r = 0.0;
   GPSStrip.color.g = 1.0;
   GPSStrip.color.b = 0.0;
   GPSStrip.color.a = 1.0;
@@ -91,26 +87,18 @@ main (int argc, char** argv)
   Direction of GPS on its first values. To rotate GPS to match the rest, we take "-rotation"
   rotation = cos(theta) -sin(theta) -------> -rotation = cos(-theta)   -sin(-theta)    =     cos(theta)  sin(theta)
              sin(theta)  cos(theta)                      sin(-theta)    cos(-theta)         -sin(theta)  cos(theta)
-direction for test1
-0.992979144844530	-0.118289551118544
-0.118289551118544	0.992979144844530
-
-direction for test2
-0.995799281185580	-0.0915630470784069
-0.0915630470784069	0.995799281185580
   */
-  if (test==1)
-  {
-  rotation << 0.992979144844530, 0.118289551118544, // ------------> Empirical
-              -0.118289551118544, 0.992979144844530;
-  }
-  else
-  {
-  rotation << 0.995799281185580,	0.0915630470784069,
-              -0.0915630470784069, 0.995799281185580;
-  }
+  float theta;
+  if (test==1)  
+    theta = 7.4*(3.141592/180.0);   // ------------> Empirical (debugging)
+  else if (test==2)
+    theta = 5.4*(3.141592/180.0);   // ------------> Empirical (debugging)
+    
+  rotation << cos(theta), sin(theta),
+              -sin(theta), cos(theta);
 
-  myfile = fopen ("logGPS.txt","w");
+  myfile = fopen ("/home/alberto/workspaces/workspace14diciembre/logGPS.txt","w");
+  myfileRaw = fopen ("/home/alberto/workspaces/workspace14diciembre/logGPSRaw.txt","w");
   while (ros::ok())
   {
     ros::param::get("tfGPS", tfGPS);
@@ -134,6 +122,10 @@ direction for test2
         fprintf(myfile, "%.16f ", GPSData.utm_norte - GPS_y_init);
         fprintf(myfile, "%.16f ", GPSData.altura - GPS_z_init);
         fprintf(myfile, "%d\n", GPSData.calidad);
+        fprintf(myfileRaw, "%.16f ", GPSData.utm_este);
+        fprintf(myfileRaw, "%.16f ", GPSData.utm_norte);
+        fprintf(myfileRaw, "%.16f ", GPSData.altura);
+        fprintf(myfileRaw, "%d\n", GPSData.calidad);
       }
     }
 

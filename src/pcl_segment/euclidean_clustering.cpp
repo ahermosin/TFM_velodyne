@@ -36,7 +36,7 @@
 #include <iostream>
 #include <fstream>
 
-ofstream myfile ("logFile.txt"); 
+ofstream myfile ("/home/alberto/workspaces/workspace14diciembre/logVE.txt"); 
 tf::StampedTransform transform;
 geometry_msgs::PoseArray msg_ve;
 geometry_msgs::PoseArray msg_ve_BL;
@@ -45,35 +45,26 @@ sensor_msgs::PointCloud2 msg_cl;
 sensor_msgs::PointCloud2 msg_ng;
 geometry_msgs::PoseStamped msg_ground;
 visualization_msgs::MarkerArray marker_array;
-visualization_msgs::MarkerArray cylinders; // Global messages definitions
   
 void callback(const sensor_msgs::PointCloud2ConstPtr& input)
 {
-  std::cout << "flagCallback1" << std::endl;
   clock_t t1, t2;
   t1 = clock();
 
-  std::cout << "flagCallback2" << std::endl;
 	sensor_msgs::PointCloud2::Ptr clusters (new sensor_msgs::PointCloud2);	
   geometry_msgs::PoseArray msg_aux;
   geometry_msgs::PoseArray msg_aux_BL;
   visualization_msgs::MarkerArray marker_array_aux;
-  visualization_msgs::MarkerArray cylinders_aux; // Local messages definitions
 	
-  std::cout << "flagCallback3" << std::endl;
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloudCropped (new pcl::PointCloud<pcl::PointXYZ>), cloudDownsampled (new pcl::PointCloud<pcl::PointXYZ>);
-//  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
   pcl::fromROSMsg(*input, *cloud);
-//	pcl::fromROSMsg(*input, *cloud2); // The ROS message, given as sensor_msgs::PointCloud2ConstPtr is translated to PCL type pcl::PointCloud<pcl::PointXYZ>::Ptr
 
   geometry_msgs::PoseStamped pose; // For quaternion conversions
   tf::Quaternion tfQuat;
   geometry_msgs::Quaternion gmQuat; 
   float theta;
   float u[3]; // u is the normalized vector used to turn Z axis until it reaches the orientation of the ground, by turning theta radians. It is obtained by cross-multiplying Z-axis and the director vector of the vertical element
-  //std::cout << "PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl;
 
-  std::cout << "flagCallback4" << std::endl;
 //                                                                      INPUT CLOUD
 //                                                                           |
 //                                                                           |
@@ -102,7 +93,6 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   pass.filter (*cloudCropped);
 */
 
-  std::cout << "flagCallback5" << std::endl;
   float low_lim_x, low_lim_y, low_lim_z, up_lim_x, up_lim_y, up_lim_z;// So it will be done manually
   ros::param::get("low_lim_x", low_lim_x);
   ros::param::get("low_lim_y", low_lim_y);
@@ -111,9 +101,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   ros::param::get("up_lim_y", up_lim_y);
   ros::param::get("up_lim_z", up_lim_z);
   
-  int k;
-
-//  pcl_ros::transformPointCloud(*cloud, *cloud, transform.inverse());
+  int k=0;
   for(k=0; k<=cloud->points.size(); k++) // Remove the points within a cube of volume (up_lim_x - low_lim_x)m x (up_lim_y - low_lim_y)m x (up_lim_z - low_lim_z)m centered in the sensor. In order to avoid 6 comparations at a time it will be performed in three steps, saving efforts
   {
     if(cloud->points[k].x<low_lim_x || cloud->points[k].x>up_lim_x)
@@ -123,7 +111,30 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
     else if(cloud->points[k].z<low_lim_z || cloud->points[k].z>up_lim_z)
       cloudCropped->points.push_back (cloud->points[k]);
   }
-  std::cout << "flagCallback6" << std::endl;
+
+/*  //proved slower
+  t1 = clock();
+  while(k<cloud->points.size())
+  {
+    if(cloud->points[k].x>low_lim_x && cloud->points[k].x<up_lim_x)
+    {
+      if(cloud->points[k].y>low_lim_y && cloud->points[k].y<up_lim_y)
+      {  
+        if(cloud->points[k].z>low_lim_z && cloud->points[k].z<up_lim_z)
+          cloud->points.erase(cloud->points.begin()+k);
+        else
+          k++;
+      }
+      else
+        k++;
+    }
+    else
+      k++;
+  }
+  *cloudCropped = *cloud;
+  t2 = clock();
+  std::cout << "time: " << (float)(t2-t1)/CLOCKS_PER_SEC*1000 << std::endl;
+*/
   
   cloudCropped->width = cloudCropped->points.size ();
   cloudCropped->height = 1;
@@ -154,19 +165,13 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
     vg.setMinimumPointsNumberPerVoxel(minPointsVoxel);
     vg.filter (*cloudDownsampled);
   }
-  // If downsampling is disabled (discouraged, since computation time is extremely high)
+  // If downsampling is disabled (discouraged, since computation time is extremely higher)
   else
     *cloudDownsampled = *cloudCropped;
   
   pcl::toROSMsg(*cloudDownsampled, msg_ds); // For visualization purposes, the downsampled cloud is published to a topic
-  float delay_ds;
-  ros::param::get("delay_ds", delay_ds);
-  t2 = clock();
-  delay_ds = (float)(t2-t1)/CLOCKS_PER_SEC;
-  msg_ds.header.stamp = ros::Time::now() - ros::Duration(0.0*delay_ds);
-  t1 = clock();
+  msg_ds.header.stamp = ros::Time::now();
   msg_ds.header.frame_id = "base_link"; 
-  std::cout << "flag1" << std::endl;
 //////////////////////////////////////////////////////////////////////////////////////
 //                                                                 CLOUD (NOT) DOWNSAMPLED
 //                                                                           |
@@ -192,16 +197,13 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   pcl::ModelCoefficients::Ptr coefficientsGround (new pcl::ModelCoefficients);
   pcl::ModelCoefficients::Ptr coefficientsLine (new pcl::ModelCoefficients);
   pcl::PointIndices::Ptr inliersGround (new pcl::PointIndices), inliersLine (new pcl::PointIndices);
-  std::cout << "flag2" << std::endl;
 
   neGround.setSearchMethod (treeGround);
   neGround.setInputCloud (cloudDownsampled); // Doing downsampling increases computation speed up to 10 times
   float KSearchGround;
   ros::param::get("KSearchGround", KSearchGround);
   neGround.setKSearch (KSearchGround); // The higher KSearchGround is, the slower neGround.compute gets
-    std::cout << "flag3" << std::endl;
   neGround.compute (*cloudNormals);
-    std::cout << "flag4" << std::endl;
 
 //////////////////////////////////////////////////////////////////////////////////////
 //                                                                 POINT NORMALS ESTIMATED
@@ -233,61 +235,45 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   segGroundN.setInputCloud (cloudDownsampled);
   segGroundN.setInputNormals (cloudNormals);
   segGroundN.segment (*inliersGround, *coefficientsGround);
-      std::cout << "flag5" << std::endl;
+
   if (coefficientsGround->values.size() != 0)
   {
-  //std::cout << *coefficientsGround << std::endl;
-  
-  geometry_msgs::Vector3 groundDistance;
-  geometry_msgs::Vector3 groundDirection;
-  
-  
-  groundDirection.x = coefficientsGround->values[0];
-  groundDirection.y = coefficientsGround->values[1];
-  groundDirection.z = coefficientsGround->values[2];
+    geometry_msgs::Vector3 groundDistance;
+    geometry_msgs::Vector3 groundDirection;
+    
+    groundDirection.x = coefficientsGround->values[0];
+    groundDirection.y = coefficientsGround->values[1];
+    groundDirection.z = coefficientsGround->values[2];
 
-  groundDistance.x = coefficientsGround->values[3]*coefficientsGround->values[0];
-  groundDistance.y = coefficientsGround->values[3]*coefficientsGround->values[1];
-  groundDistance.z = coefficientsGround->values[3]*coefficientsGround->values[2];
-  
-  
-  
-      std::cout << "flag6" << std::endl;
+    groundDistance.x = coefficientsGround->values[3]*coefficientsGround->values[0];
+    groundDistance.y = coefficientsGround->values[3]*coefficientsGround->values[1];
+    groundDistance.z = coefficientsGround->values[3]*coefficientsGround->values[2];
+    
+    msg_ground.header.stamp = ros::Time::now();
+    msg_ground.header.frame_id = "base_link";
+    msg_ground.pose.position.x = groundDistance.x;
+    msg_ground.pose.position.y = groundDistance.y;
+    msg_ground.pose.position.z = groundDistance.z;
 
-  msg_ground.header.stamp = ros::Time::now();
-  msg_ground.header.frame_id = "base_link";
-  msg_ground.pose.position.x = groundDistance.x;
-  msg_ground.pose.position.y = groundDistance.y;
-  msg_ground.pose.position.z = groundDistance.z;
-        std::cout << "flag7" << std::endl;
+    u[0] = (-groundDirection.y) / (sqrt(pow(groundDirection.x,2) + pow(groundDirection.y,2)));
+    u[1] = (groundDirection.x) / (sqrt(pow(groundDirection.x,2) + pow(groundDirection.y,2)));
+    u[2] = 0.0;
+    
+    theta = acos(groundDirection.z);
+    
+    tfQuat = {sin(theta/2)*u[0], sin(theta/2)*u[1], sin(theta/2)*u[2], cos(theta/2)};  // We need to translate this information into quaternion form
+    
+    tf::quaternionTFToMsg(tfQuat, gmQuat);
+    msg_ground.pose.orientation = gmQuat;
 
-  u[0] = (-groundDirection.y) / (sqrt(pow(groundDirection.x,2) + pow(groundDirection.y,2)));
-  u[1] = (groundDirection.x) / (sqrt(pow(groundDirection.x,2) + pow(groundDirection.y,2)));
-  u[2] = 0.0;
-  
-  theta = acos(groundDirection.z);
-  
-  tfQuat = {sin(theta/2)*u[0], sin(theta/2)*u[1], sin(theta/2)*u[2], cos(theta/2)};  // We need to translate this information into quaternion form
-  
-  tf::quaternionTFToMsg(tfQuat, gmQuat);
-  //std::cout << msg_ground.pose << std::endl;
-  msg_ground.pose.orientation = gmQuat;
-      std::cout << "flag8" << std::endl;
+    extract.setInputCloud (cloudDownsampled); // Extract the planar inliers from the input cloud
+    extract.setIndices (inliersGround);
+    extract.setNegative (true);
+    extract.filter (*cloudNoGround);
 
-  extract.setInputCloud (cloudDownsampled); // Extract the planar inliers from the input cloud
-  extract.setIndices (inliersGround);
-  extract.setNegative (true);
-  extract.filter (*cloudNoGround);
-        std::cout << "flag9" << std::endl;
-
-  pcl::toROSMsg(*cloudNoGround, msg_ng);
-  float delay_ng;
-  ros::param::get("delay_ng", delay_ng);
-  t2 = clock();
-  delay_ng = (float)(t2-t1)/CLOCKS_PER_SEC;
-  msg_ng.header.stamp = ros::Time::now() - ros::Duration(0.0*delay_ng);
-  t1 = clock();
-  msg_ng.header.frame_id = "base_link";
+    pcl::toROSMsg(*cloudNoGround, msg_ng);
+    msg_ng.header.stamp = ros::Time::now();
+    msg_ng.header.frame_id = "base_link";
   }
   else
   *cloudNoGround = *cloudDownsampled;
@@ -347,12 +333,7 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
     *clustersTotal = *clustersTotal + *cloudCluster;
   }
   pcl::toROSMsg(*clustersTotal, msg_cl); 
-  float delay_cl;
-  ros::param::get("delay_cl",delay_cl);
-  t2 = clock();
-  delay_cl = (float)(t2-t1)/CLOCKS_PER_SEC;
-  msg_cl.header.stamp= ros::Time::now() - ros::Duration(0.0*delay_cl);
-  t1 = clock();
+  msg_cl.header.stamp= ros::Time::now();
   msg_cl.header.frame_id = "base_link";
     
   float textScale;
@@ -393,7 +374,6 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   bool logfile;
   ros::param::get("logfile",logfile);
   visualization_msgs::Marker marker_aux;
-  visualization_msgs::Marker cylinder_aux;
   neClusters.setSearchMethod (treeCloudCluster);
   neClusters.setKSearch (KSearchClusterFit);
   
@@ -431,12 +411,8 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
     segLineN.setInputCloud (cloudCluster);
     segLineN.setInputNormals (cloudClusterNormals);
     segLineN.segment (*inliersLine, *coefficientsLine); // Obtain the line inliers and coefficients
-//    pcl::SampleConsensusModelLine<pcl::PointXYZ> fitLine (cloudCluster, inliersLine->indices); //We take into account only inliers of the cluster
     pcl::SampleConsensusModelLine<pcl::PointXYZ> fitLine (cloudCluster);
-
-//    std::cout << " inliersLine->indices.size(): " << inliersLine->indices.size() << " cloudCluster->points.size(): " << cloudCluster->points.size() << std::endl;
     
-//    std::cout << *coefficientsLine << std::endl;
     coefficientsLine->header.frame_id = "base_link";
     xpLine = coefficientsLine->values[0];
     ypLine = coefficientsLine->values[1];
@@ -449,7 +425,6 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
     {
       if(zdLine > cos(tiltLim*3.1415/180.0)) // less than a user-given tilt
       {
-//        std::cout << "--------------------------------------------------" << std::endl;
         coefficientsFitLine(0) = xpLine;
         coefficientsFitLine(1) = ypLine;
         coefficientsFitLine(2) = zpLine;
@@ -577,13 +552,9 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
     } // end if(coefficientsLine->values.size() != 0)
     j++;
   } // end for (std::vector<pcl::PointIndices>::const_iterator it = clusterIndices.begin (); it != clusterIndices.end (); ++it)
-  float delay_ve;
-  ros::param::get("delay_ve", delay_ve);
-  t2 = clock();
-  delay_ve = (float)(t2-t1)/CLOCKS_PER_SEC;
   msg_aux_BL.header.stamp = ros::Time::now();
   msg_aux_BL.header.frame_id = "base_link";
-  msg_aux.header.stamp = ros::Time::now() - ros::Duration(0.0*delay_ve);
+  msg_aux.header.stamp = ros::Time::now();
   msg_aux.header.frame_id = "map";
   
   msg_ve = msg_aux; // Pass local messages to global messages, in order to be published in main
@@ -617,54 +588,30 @@ main (int argc, char** argv)
   while (ros::ok())
   {
     
-    std::cout << "flagMain0" << std::endl;
     ros::spinOnce();
-    std::cout << "flagMain1" << std::endl;
     try
     {
-    std::cout << "flagMain2" << std::endl;
-    //  listener.waitForTransform("map", "base_link", ros::Time::now(), ros::Duration(4.0));
-    std::cout << "flagMain3" << std::endl;
       listener.lookupTransform("map", "base_link", ros::Time(0), transform);
     }
     catch(tf::TransformException& ex)
     {
-    std::cout << "flagMain4" << std::endl;
       ROS_ERROR("Received an exception trying to transform: %s", ex.what());
-    std::cout << "flagMain5" << std::endl;
       ros::Duration(3.0).sleep();      
     }
 
-    std::cout << "flagMain6" << std::endl;
-    
-
-
-//    ros::spin();
     pub_ve.publish(msg_ve);
     pub_ve_BL.publish(msg_ve_BL);
-    std::cout << "flagMain7" << std::endl;
     pub_ds.publish(msg_ds); // debugging
-    std::cout << "flagMain8" << std::endl;
     pub_cl.publish(msg_cl); // debugging
-    std::cout << "flagMain9" << std::endl;
     pub_ng.publish(msg_ng); // debugging
-    std::cout << "flagMain10" << std::endl;
     pub_ground.publish(msg_ground); // debugging
-    std::cout << "flagMain11" << std::endl;
     pub_text.publish(marker_array); // debugging
-    std::cout << "flagMain12" << std::endl;
 
-
-
-    
     marker_main.action = visualization_msgs::Marker::DELETEALL; // To avoid dead displays on screen
-    std::cout << "flagMain13" << std::endl;
     marker_array.markers.push_back(marker_main);
-    std::cout << "flagMain14" << std::endl;
     pub_text.publish(marker_array); // debugging
-    std::cout << "flagMain15" << std::endl;
+
     loop_rate.sleep();
-    std::cout << "flagMain16" << std::endl;
     
   }
   myfile.close();

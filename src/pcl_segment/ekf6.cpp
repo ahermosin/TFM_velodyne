@@ -11,6 +11,7 @@
 #include <tf/transform_broadcaster.h>
 #include <visualization_msgs/Marker.h>
 #include "geometry_msgs/PoseStamped.h"
+#include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include <geometry_msgs/PoseArray.h>
 #include "pugixml.hpp"
 #include <pcl_segment/positionRPY.h>
@@ -21,7 +22,7 @@
 #include <Eigen/Dense>
 #include <fstream>
 #include <iostream>
-#include "tinyxml2.h"
+#include "tinyxml.h"
 #include "customFunctions.h"
 
 //init, pred y actualiz
@@ -96,8 +97,8 @@ main (int argc, char** argv)
 //  ros::Subscriber sub_incPositionOdom = nh.subscribe ("/incPositionOdom", 1, callback_incPositionOdom);
   ros::Publisher pub_ekf = nh.advertise<visualization_msgs::Marker>("pose_filtered", 1); // debugging
   ros::Publisher pub_ekfPoseOdom = nh.advertise<geometry_msgs::PoseStamped>("ekfPoseOdom", 1); // debugging
-  ros::Publisher pub_ekfPred = nh.advertise<geometry_msgs::PoseStamped>("pose_predicted", 1); // debugging
-  ros::Publisher pub_ekfCorr = nh.advertise<geometry_msgs::PoseStamped>("pose_corrected", 1); // debugging
+  ros::Publisher pub_ekfPred = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("pose_predicted", 1); // debugging
+  ros::Publisher pub_ekfCorr = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("pose_corrected", 1); // debugging
   ros::Publisher pub_ekfIncOdom = nh.advertise<geometry_msgs::PoseStamped>("ekfIncOdom", 1); // debugging
   ros::Publisher pub_ekfIncOdom2 = nh.advertise<geometry_msgs::PoseStamped>("ekfIncOdom2", 1); // debugging
   ros::Publisher pub_ekfIncOdomRPY = nh.advertise<pcl_segment::positionRPY>("ekfIncOdomRPY", 1); // debugging
@@ -111,9 +112,9 @@ main (int argc, char** argv)
   
   /*INITIALIZATION*/  
   geometry_msgs::PoseStamped poseZero;
-  geometry_msgs::PoseStamped poseEKF;
-  geometry_msgs::PoseStamped posePredEKF;
-  geometry_msgs::PoseStamped poseCorrEKF;
+
+  geometry_msgs::PoseWithCovarianceStamped posePredEKF;
+  geometry_msgs::PoseWithCovarianceStamped poseCorrEKF;
   geometry_msgs::PoseStamped incOdom2;
   geometry_msgs::PoseStamped incOdom2Prev;
   geometry_msgs::PoseStamped incOdomPrev;
@@ -126,8 +127,6 @@ main (int argc, char** argv)
   pcl_segment::positionRPY positionCorrEKF;
   pcl_segment::positionRPY sigma_odom;
   pcl_segment::positionRPY sigma_obs;
-  
-  Matrix <float, 4, 6> B; // Binding matrix for EKF
 
   geometry_msgs::Point ekfPoint;
   visualization_msgs::Marker ekfStrip;
@@ -149,14 +148,15 @@ main (int argc, char** argv)
   poseZero.header.stamp = initTime;
   poseZero.header.frame_id = "map";
   
-  poseEKF = poseZero;// poseEKF init
-  posePredEKF = poseZero; // posePredEKF init
-  poseCorrEKF = poseZero; // poseCorrEKF init
+  posePredEKF.pose.pose = poseZero.pose; // posePredEKF init
+  posePredEKF.header = poseZero.header;
+  poseCorrEKF.pose.pose = poseZero.pose; // poseCorrEKF init
+  poseCorrEKF.header = poseZero.header;
   incOdomPrev = poseZero; // incOdomPrev init
   incOdom = poseZero; // incOdom init
   incOdom2 = poseZero; // incOdom2 init
   incOdom2Prev = poseZero; // incOdom2OPrev init
-  
+    
   positionZero.x = 0.0;
   positionZero.y = 0.0;
   positionZero.z = 0.0;
@@ -169,25 +169,29 @@ main (int argc, char** argv)
   incOdomEKFPrev = positionZero; // incOdomEKFPrev init
   positionPredEKF = positionZero; // positionPredEKF init
   positionCorrEKF = positionZero; // positionCorrEKF init
+
+  ros::param::get("sigma_odom_x", sigma_odom.x);
+  ros::param::get("sigma_odom_y", sigma_odom.y);
+  ros::param::get("sigma_odom_z", sigma_odom.z);
+  ros::param::get("sigma_odom_roll", sigma_odom.roll);
+  ros::param::get("sigma_odom_pitch", sigma_odom.pitch);
+  ros::param::get("sigma_odom_yaw", sigma_odom.yaw); // odometry sigmas
+
+  ros::param::get("sigma_obs_x", sigma_obs.x);
+  ros::param::get("sigma_obs_y", sigma_obs.y);
+  ros::param::get("sigma_obs_z", sigma_obs.z);
+  ros::param::get("sigma_obs_roll", sigma_obs.roll);
+  ros::param::get("sigma_obs_pitch", sigma_obs.pitch);
+  ros::param::get("sigma_obs_yaw", sigma_obs.yaw); // observation sigmas
   
-  sigma_odom.x = 0.5;
-  sigma_odom.y = 0.5;
-  sigma_odom.z = 0.5;
-  sigma_odom.roll = 0.1;
-  sigma_odom.pitch = 0.1;
-  sigma_odom.yaw = 0.1; // odometry sigmas
-  
-  sigma_obs.x = 0.1;
-  sigma_obs.y = 0.1;
-  sigma_obs.z = 0.1;
-  sigma_obs.roll = 0.05;
-  sigma_obs.pitch = 0.05;
-  sigma_obs.yaw = 0.05; // observation sigmas
+  Matrix <float, 6, 6> B; // Binding matrix for EKF
   
   B << 1, 0, 0, 0, 0, 0, // x
        0, 1, 0, 0, 0, 0, // y
+       0, 0, 1, 0, 0, 0, // z
        0, 0, 0, 1, 0, 0, // roll
-       0, 0, 0, 0, 1, 0; // pitch ------> Binding matrix: we store the components of elements in which we're interested (optional)
+       0, 0, 0, 0, 1, 0, // pitch
+       0, 0, 0, 0, 0, 1; // yaw  ------> Binding matrix: we store the components of elements in which we're interested (optional)
 
   int B_rows = B.rows();
 
@@ -198,9 +202,9 @@ main (int argc, char** argv)
   ekfStrip.id = 0;
   ekfStrip.pose.orientation.w = 1.0;
   ekfStrip.scale.x = 0.1;
-  ekfStrip.color.r = 0.0;
-  ekfStrip.color.g = 1.0;
-  ekfStrip.color.b = 1.0;
+  ekfStrip.color.r = 1.0;
+  ekfStrip.color.g = 0.0;
+  ekfStrip.color.b = 0.0;
   ekfStrip.color.a = 1.0;
 
   Matrix6f P = P.Zero(); // Kalman covariance matrix
@@ -216,53 +220,59 @@ main (int argc, char** argv)
   geometry_msgs::PoseStamped map_element;
   pcl_segment::observationRPY map_aux;
   
-  /*
-  test1
-  58.0    0.2
-  74.75   0.5
-  91.9    1.1
+  std::string inputFileName; // ------------------------------------------------------> Read CSV file with coordinates of the vertical elements
+  if(test==1)
+    inputFileName = "/home/alberto/workspaces/workspace14diciembre/map1.csv";
+  else
+    inputFileName = "/home/alberto/workspaces/workspace14diciembre/map2.csv";
   
-  test2
-  68.25 -3.5
-  85.46 3.15
-  */
+  std::ifstream inputFile(inputFileName.c_str());
   
+  int l = 0;
   
-  
-  if (test==1){
-  ros::param::get("x1", map_aux.position.x); ros::param::get("y1", map_aux.position.y); map_aux.position.z = -1.72; map_aux.position.roll = 0.0; map_aux.position.pitch = 0.0; map_aux.position.yaw = 0.0; map_aux.is_Known = true;
-  map.push_back(map_aux);
-  ros::param::get("x2", map_aux.position.x); ros::param::get("y2", map_aux.position.y); map_aux.position.z = -1.72; map_aux.position.roll = 0.0; map_aux.position.pitch = 0.0; map_aux.position.yaw = 0.0; map_aux.is_Known = true;
-  map.push_back(map_aux);
-  ros::param::get("x3", map_aux.position.x); ros::param::get("y3", map_aux.position.y); map_aux.position.z = -1.72; map_aux.position.roll = 0.0; map_aux.position.pitch = 0.0; map_aux.position.yaw = 0.0; map_aux.is_Known = true;
-  map.push_back(map_aux);
-  
-  ros::param::get("x1", map_element.pose.position.x); ros::param::get("y1", map_element.pose.position.y); map_element.pose.position.z = -1.72;
-  map_element.pose.orientation.x = 0.0; map_element.pose.orientation.y = 0.0; map_element.pose.orientation.z = 0.0; map_element.pose.orientation.w = 1.0;
-  map_elements.poses.push_back(map_element.pose);
-  ros::param::get("x2", map_element.pose.position.x); ros::param::get("y2", map_element.pose.position.y); map_element.pose.position.z = -1.72;
-  map_element.pose.orientation.x = 0.0; map_element.pose.orientation.y = 0.0; map_element.pose.orientation.z = 0.0; map_element.pose.orientation.w = 1.0;
-  map_elements.poses.push_back(map_element.pose);
-  ros::param::get("x3", map_element.pose.position.x); ros::param::get("y3", map_element.pose.position.y); map_element.pose.position.z = -1.72;
-  map_element.pose.orientation.x = 0.0; map_element.pose.orientation.y = 0.0; map_element.pose.orientation.z = 0.0; map_element.pose.orientation.w = 1.0;
-  map_elements.poses.push_back(map_element.pose);
+  while (inputFile) {
+    l++;
+    std::string s;
+    if (!std::getline(inputFile, s)) break;
+    if (s[0] != '#') {
+      std::istringstream ss(s);
+      std::vector<double> record;
+
+      while (ss) {
+        std::string line;
+        if (!std::getline(ss, line, ','))
+          break;
+        try {
+          record.push_back(std::stof(line));
+        }
+        catch (const std::invalid_argument e) {
+          std::cout << "NaN found in file " << " line " << l << std::endl;
+          e.what();
+        }
+      }
+      map_aux.position.x = record[0];
+      map_aux.position.y = record[1];
+      map_aux.position.z = -1.9;
+      map_aux.position.roll = 0.0;
+      map_aux.position.pitch = 0.0;
+      map_aux.position.yaw = 0.0;
+      map.push_back(map_aux);
+      
+      map_element.pose.position.x = record[0];
+      map_element.pose.position.y = record[1];
+      map_element.pose.position.z = -1.9;
+      map_element.pose.orientation.x = 0.0;
+      map_element.pose.orientation.y = 0.0;
+      map_element.pose.orientation.z = 0.0;
+      map_element.pose.orientation.w = 1.0;
+      map_elements.poses.push_back(map_element.pose);
+    }
   }
-  else{
-  ros::param::get("x1", map_aux.position.x); ros::param::get("y1", map_aux.position.y); map_aux.position.z = -1.72; map_aux.position.roll = 0.0; map_aux.position.pitch = 0.0; map_aux.position.yaw = 0.0; map_aux.is_Known = true;
-  map.push_back(map_aux);
-  ros::param::get("x2", map_aux.position.x); ros::param::get("y2", map_aux.position.y); map_aux.position.z = -1.72; map_aux.position.roll = 0.0; map_aux.position.pitch = 0.0; map_aux.position.yaw = 0.0; map_aux.is_Known = true;
-  map.push_back(map_aux);
-  
-  ros::param::get("x1", map_element.pose.position.x); ros::param::get("y1", map_element.pose.position.y); map_element.pose.position.z = -1.72;
-  map_element.pose.orientation.x = 0.0; map_element.pose.orientation.y = 0.0; map_element.pose.orientation.z = 0.0; map_element.pose.orientation.w = 1.0;
-  map_elements.poses.push_back(map_element.pose);
-  ros::param::get("x2", map_element.pose.position.x); ros::param::get("y2", map_element.pose.position.y); map_element.pose.position.z = -1.72;
-  map_element.pose.orientation.x = 0.0; map_element.pose.orientation.y = 0.0; map_element.pose.orientation.z = 0.0; map_element.pose.orientation.w = 1.0;
-  map_elements.poses.push_back(map_element.pose);
+
+  if (!inputFile.eof()) {
+    std::cerr << "Could not read file " << "\n";
   }
   map_elements.header.frame_id = "map";
-
-  
   
   R(0,0) = sigma_obs.x*sigma_obs.x;
   R(1,1) = sigma_obs.y*sigma_obs.y;
@@ -280,12 +290,25 @@ main (int argc, char** argv)
   Q(3,3) = sigma_odom.roll*sigma_odom.roll;
   Q(4,4) = sigma_odom.pitch*sigma_odom.pitch;
   Q(5,5) = sigma_odom.yaw*sigma_odom.yaw;
+  float QFactor;
+  ros::param::get("QFactor", QFactor);
+  Q = Q*QFactor;
+  
+  ros::param::get("P00_init", P(0,0));
+  ros::param::get("P11_init", P(1,1));
+  ros::param::get("P22_init", P(2,2));
+  ros::param::get("P33_init", P(3,3));
+  ros::param::get("P44_init", P(4,4));
+  ros::param::get("P55_init", P(5,5));
+  float PFactor;
+  ros::param::get("PFactor", PFactor);
+  P = P*PFactor;
   
   std::cout << "Q:" << std::endl;
   std::cout << Q << std::endl;
 
   bool logfile;
-  std::ofstream myfile ("logEKF.txt");
+  std::ofstream myfile ("/home/alberto/workspaces/workspace14diciembre/logEKF.txt");
   
   int aux;
   double theta, thetaPrev, dT, wheelsL;
@@ -304,14 +327,11 @@ main (int argc, char** argv)
     ros::param::get("logfile", logfile);
     ros::param::get("wheelsL", wheelsL);
     currentTime = ros::Time::now();
-    
-    ros::spinOnce();
 
     /*PREDICTION*/ // needs: incOdom
 
     pub_ekfIncOdom.publish(incOdom); // -----------------------------------> Check that incOdom is the same that in odom node
     pub_ekfPoseOdom.publish(poseOdom); // ---------------------------------> Check that poseOdom is the same that in odom node
-
     
     theta = thetaPrev + vel*dT/wheelsL*tan(dir);                                     // Calculate incOdom locally
     incOdom2.pose.position.x = vel*dT*cos(theta);
@@ -320,47 +340,27 @@ main (int argc, char** argv)
     quat.setRPY(0.0, 0.0, vel*dT/wheelsL*tan(dir));
     tf::quaternionTFToMsg(quat, incOdom2.pose.orientation);
     incOdom2.header.stamp = ros::Time::now();
-
-    /*
-    std::cout << "time: " << ros::Time::now() << std::endl;
-    std::cout << "theta: " << theta << std::endl;
-    std::cout << "thetaPrev: " << thetaPrev << std::endl;
-    std::cout << "vel: " << vel << std::endl;
-    std::cout << "dir: " << dir << std::endl;
-    std::cout << "x: " << incOdom2.pose.position.x << std::endl;
-    std::cout << "y: " << incOdom2.pose.position.y << std::endl;
-    */
   
     pub_ekfIncOdom2.publish(incOdom2); // -----------------------------------> Check that incOdom is the same that in odom node
     
-
-    incOdomEKF.x = incOdom.pose.position.x;
-    incOdomEKF.y = incOdom.pose.position.y;
-    incOdomEKF.z = incOdom.pose.position.z;
-    quat.setRPY(0.0, 0.0, -theta);
-//    tf::quaternionMsgToTF(incOdom.pose.orientation, quat); // pass rotation info from geometry_msgs::PoseS... to a tf::Quaternion object quat
+    incOdomEKF.x = vel*dT*cos(theta);
+    incOdomEKF.y = vel*dT*sin(theta);
+    incOdomEKF.z = 0.0;
+    quat.setRPY(0.0, 0.0, theta);
     tf::Matrix3x3 quaternionToRPY(quat); // initialize a tf::Matrix3x3 object with quat quaternion
     quaternionToRPY.getRPY(incOdomEKF.roll, incOdomEKF.pitch, incOdomEKF.yaw); // get RPY angles from tf::Matrix3x3 object
 
-
     pub_ekfIncOdomRPY.publish(incOdomEKF);
 
-
-    positionPredEKF = Comp(positionEKF, incOdomEKF); // -----------------------> Position prediction (from geometry_msgs::TransformStamped incOdom)
-//    positionPredEKF = Comp(positionEKF, incPositionOdom); // -----------------------> Position prediction (from pcl_segment::positionRPY incPositionOdom)
+    positionPredEKF = Comp(positionEKF, incOdomEKF); // -----------------------> Position prediction
     
     pub_ekfPosition.publish(positionPredEKF);
     
     Fx = J1_n(positionEKF, incOdomEKF);
     Fu = J2_n(positionEKF, incOdomEKF);
     
-//    std::cout << "Fx: " << Fx << std::endl;
-//    std::cout << "Fu: " << Fu << std::endl;
-    
     P = Fx*P*Fx.transpose() + Fu*Q*Fu.transpose(); // -----------------------> Prediction of state's covariance
-    
-//    std::cout << "P: " << P << std::endl;
-    
+    std::cout << "P: " << std::endl << P << std::endl;
     /************************************************************************************************/
     /*UPDATE*/ // needs: observations
     std::vector<pcl_segment::observationRPY> observations;
@@ -368,8 +368,6 @@ main (int argc, char** argv)
     
     for (int i=0; i<verticalElements.poses.size(); i++) // read geometry_msgs::PoseArray and store as std::vector<observationRPY>
     {
-      std::cout << "for verticalelements size" << std::endl;
-      std::cout << "verticalElements.poses[i]: " << std::endl << verticalElements.poses[i] << std::endl;
       pcl_segment::observationRPY obs_aux; // ------------------------> Frame id: "map"
       tf::Quaternion quat_aux;
       obs_aux.position.x = verticalElements.poses[i].position.x;
@@ -382,8 +380,6 @@ main (int argc, char** argv)
       tf::Matrix3x3 quaternionToYPR_aux(quat_aux);
       quaternionToYPR_aux.getEulerYPR(obs_aux.position.yaw, obs_aux.position.pitch, obs_aux.position.roll);
       
-      
-      std::cout << "verticalElements_BL.poses[i]: " << std::endl << verticalElements_BL.poses[i] << std::endl;
       pcl_segment::observationRPY obs_aux_BL; // -----------------------> Frame id: "base_link"
       tf::Quaternion quat_aux_BL;
       obs_aux_BL.position.x = verticalElements_BL.poses[i].position.x;
@@ -407,19 +403,23 @@ main (int argc, char** argv)
       int j_min = -1;
       std::vector<int> i_vec;
       std::vector<int> j_vec;
-
-      std::cout << "if observations.size()>0" << std::endl;
+    
       float minMahalanobis = mahalanobisDistance(observations[0], map[0], R); // initial value
       for (int i=0; i<observations.size(); i++) // Compare all observations with all the elements of the map. If mahalanobisDistance < mahalanobisDistanceThreshold between i-th observation and j-th element, there is a match
       {
         for (int j=0; j<map.size(); j++)
         {
           std::cout << "mahalanobisDistance[" << i << "][" << j << "]: " << mahalanobisDistance(observations[i], map[j], R) << std::endl;
+          std::cout << "observations[" << i << "]:" << std::endl << observations[i] << std::endl;
+          std::cout << "map[" << j << "]:" << std::endl << map[j] << std::endl;
+          
           if(mahalanobisDistance(observations[i], map[j], R) < mahalanobisDistanceThreshold && mahalanobisDistance(observations[i], map[j], R) <= minMahalanobis) //Theres is a match, but it must be the minimum value of all possible matches
           {
+            std::cout << "***************************************MATCH!***************************************" << std::endl;
             match = true;
             i_min = i;
             j_min = j;
+            minMahalanobis = mahalanobisDistance(observations[i], map[j], R);
           }
         }
         if (match)
@@ -429,72 +429,78 @@ main (int argc, char** argv)
           match = false;
         }
         minMahalanobis = mahalanobisDistance(observations[i+1], map[0], R);
-      } // Minimum matches are stored in i_vec and j_vec, such as (i_vec(n), j_vec(n)) is the n-th association
+      } // Minimum matches are stored in i_vec and j_vec, such that (i_vec(n), j_vec(n)) is the n-th association
       
-      std::cout << "i_vec: ";
-      for(int i=0; i<i_vec.size(); i++)
-      std::cout <<  i_vec[i]  << " ";
-      std::cout << std::endl;
-      std::cout << "j_vec: ";
-      for(int i=0; i<j_vec.size(); i++)
-      std::cout <<  j_vec[i]  << " ";
-      std::cout << std::endl;
-
-      int N = i_vec.size(); // -------> N: number of valid associations.
-      
-      MatrixXf h_i(B_rows, 1);            h_i = h_i.Zero(B_rows, 1);   // -------> h_ij for a valid association between observation_i and map_j
-      MatrixXf h_k(N*B_rows, 1);          h_k = h_k.Zero(N*B_rows, 1); // -------> All vectors h_i stacked, corresponding to valid matches between an observed element and an element in the map
-      MatrixXf H_x_i(B_rows, 6);          H_x_i = H_x_i.Zero(B_rows, 6);        // -------> H_ij for a valid association
-      MatrixXf H_x_k(N*B_rows, 6);        H_x_k = H_x_k.Zero(N*B_rows, 6);
-      MatrixXf H_z_i(B_rows, 6);          H_z_i = H_z_i.Zero(B_rows, 6);
-      MatrixXf H_z_k(N*B_rows, N*6);      H_z_k = H_z_k.Zero(N*B_rows, N*6);
-      MatrixXf R_k(N*6, N*6);             R_k = R_k.Zero(N*6, N*6);
-      MatrixXf S_k(N*B_rows, N*B_rows);   S_k = S_k.Zero(N*B_rows, N*B_rows);
-      MatrixXf W(6, N*B_rows);            W = W.Zero(6, N*B_rows);
-      
-      for(int i=0; i<N; i++)
+      if(i_vec.size() > 0) // There has been at least 1 match (N=1)
       {
-/**/    std::cout << "map[" << j_vec[i] << "].position:" << std::endl << map[j_vec[i]].position << std::endl;
-/**/    std::cout << "observations_BL[" << i_vec[i] << "].position:" << std::endl << observations_BL[i_vec[i]].position << std::endl;        
-        h_i = B*RPY2Vec(Comp(Inv(map[j_vec[i]].position), Comp(positionPredEKF, observations_BL[i_vec[i]].position))); // ----> Observations as seen from base_link FIXME
-        h_k.block(i*4, 0, 4, 1);
-/**/    std::cout << "h_i" << std::endl << h_i << std::endl;
-/**/    std::cout << "h_k" << std::endl << h_k << std::endl;
-      
-        H_x_i = B*J2_n(Inv(map[j_vec[i]].position), Comp(positionPredEKF, observations_BL[i_vec[i]].position))*J1_n(positionPredEKF, observations_BL[i_vec[i]].position);
-        H_x_k.block(i*4, 0, 4, 6) = H_x_i; 
+        std::cout << "i_vec: ";
+        for(int i=0; i<i_vec.size(); i++)
+          std::cout <<  i_vec[i]  << " ";
+        std::cout << std::endl;
+        std::cout << "j_vec: ";
+        for(int i=0; i<j_vec.size(); i++)
+          std::cout <<  j_vec[i]  << " ";
+        std::cout << std::endl;
 
-/**/    std::cout << "H_x_i:" << std::endl << H_x_i << std::endl;
-/**/    std::cout << "H_x_k:" << std::endl << H_x_k << std::endl;
-/**/    std::cout << "P*H_x_k:" << std::endl << P*H_x_k.transpose() << std::endl;
+        int N = i_vec.size(); // -------> N: number of valid associations.
 
-        H_z_i = B*J2_n(Inv(map[j_vec[i]].position), Comp(positionPredEKF, observations_BL[i_vec[i]].position))*J2_n(positionPredEKF, observations_BL[i_vec[i]].position);
-        H_z_k.block(i*4, i*6, 4, 6) = H_z_i;
-/**/    std::cout << "H_z_i:" << std::endl << H_z_i << std::endl;
-/**/    std::cout << "H_z_k:" << std::endl << H_z_k << std::endl;
+        MatrixXf h_i(B_rows, 1);            h_i = h_i.Zero(B_rows, 1);   // -------> h_ij for a valid association between observation_i and map_j
+        MatrixXf h_k(N*B_rows, 1);          h_k = h_k.Zero(N*B_rows, 1); // -------> All vectors h_i stacked, corresponding to valid matches between an observed element and an element in the map
+        MatrixXf H_x_i(B_rows, 6);          H_x_i = H_x_i.Zero(B_rows, 6);        // -------> H_ij for a valid association
+        MatrixXf H_x_k(N*B_rows, 6);        H_x_k = H_x_k.Zero(N*B_rows, 6);
+        MatrixXf H_z_i(B_rows, 6);          H_z_i = H_z_i.Zero(B_rows, 6);
+        MatrixXf H_z_k(N*B_rows, N*6);      H_z_k = H_z_k.Zero(N*B_rows, N*6);
+        MatrixXf R_k(N*6, N*6);             R_k = R_k.Zero(N*6, N*6);
+        MatrixXf S_k(N*B_rows, N*B_rows);   S_k = S_k.Zero(N*B_rows, N*B_rows);
+        MatrixXf W(6, N*B_rows);            W = W.Zero(6, N*B_rows);
         
-        R_k.block(i*6, i*6, 6, 6) = R;
-/**/    std::cout << "R_k:" << std::endl << R_k << std::endl;
-/**/    std::cout << "H_z_k*R_k*H_z_kT:" << std::endl << H_z_k*R_k*H_z_k.transpose() << std::endl;
+        for(int i=0; i<N; i++)
+        {
+/**/      std::cout << "h_i = B*RPY2Vec(Comp(Inv(map[" << j_vec[i] << "].position), Comp(positionPredEKF, observations_BL[" << i_vec[i] << "].position)))" << std::endl;
+/**/      std::cout << "map[" << j_vec[i] << "].position: " << std::endl << map[j_vec[i]].position << std::endl;
+/**/      std::cout << "Inv(map[" << j_vec[i] << "].position): " << std::endl << Inv(map[j_vec[i]].position) << std::endl;
+/**/      std::cout << "positionPredEKF: " << std::endl << positionPredEKF << std::endl;
+/**/      std::cout << "observations_BL[" << i_vec[i] << "].position: " << std::endl << observations_BL[i_vec[i]].position << std::endl;
+/**/      std::cout << "Comp(positionPredEKF, observations_BL[" << i_vec[i] << "].position): " << std::endl << Comp(positionPredEKF, observations_BL[i_vec[i]].position) << std::endl;
+          h_i = B*RPY2Vec(Comp(Inv(map[j_vec[i]].position), Comp(positionPredEKF, observations_BL[i_vec[i]].position))); // ----> Observations as seen from base_link FIXME
+          h_k.block(i*B_rows, 0, B_rows, 1) = h_i;
+/**/      std::cout << "h_i: " << std::endl << h_i << std::endl;
+/**/      std::cout << "h_k: " << std::endl << h_k << std::endl;
+          H_x_i = B*J2_n(Inv(map[j_vec[i]].position), Comp(positionPredEKF, observations_BL[i_vec[i]].position))*J1_n(positionPredEKF, observations_BL[i_vec[i]].position);
+          H_x_k.block(i*B_rows, 0, B_rows, 6) = H_x_i; 
+/**/      std::cout << "H_x_i: " << std::endl << H_x_i << std::endl;
+/**/      std::cout << "H_x_k: " << std::endl << H_x_k << std::endl;
+          H_z_i = B*J2_n(Inv(map[j_vec[i]].position), Comp(positionPredEKF, observations_BL[i_vec[i]].position))*J2_n(positionPredEKF, observations_BL[i_vec[i]].position);
+          H_z_k.block(i*B_rows, i*6, B_rows, 6) = H_z_i;
+/**/      std::cout << "H_z_i: " << std::endl << H_z_i << std::endl;
+/**/      std::cout << "H_z_k: " << std::endl << H_z_k << std::endl;
 
+          R_k.block(i*6, i*6, 6, 6) = R;
+/**/      std::cout << "R_k: " << std::endl << R_k << std::endl;
+        }
+        
+        S_k = H_x_k*P*H_x_k.transpose() + H_z_k*R_k*H_z_k.transpose();
+/**/    std::cout << "S_k = H_x_k*P*H_x_k.transpose() + H_z_k*R_k*H_z_k.transpose(): " << std::endl;
+/**/    std::cout << "H_x_k*P*H_x_k.transpose(): " << std::endl << H_x_k*P*H_x_k.transpose() << std::endl;
+/**/    std::cout << "H_z_k*R_k*H_z_k.transpose(): " << std::endl << H_z_k*R_k*H_z_k.transpose() << std::endl;
+/**/    std::cout << "S_k: " << std::endl << S_k << std::endl;
+
+        W = P*H_x_k.transpose()*S_k.inverse();
+/**/    std::cout << "W: " << std::endl << W << std::endl;
+/**/    std::cout << "W*h_k: " << std::endl << W*h_k << std::endl;
+        
+        positionCorrEKF = vec2RPY(RPY2Vec(positionPredEKF) - W*h_k);
+
+        P = (Matrix6f::Identity() - W*H_x_k)*P;
+/**/    std::cout << "P updated: " << std::endl << P << std::endl;
       }
-      S_k = H_x_k*P*H_x_k.transpose() + H_z_k*R_k*H_z_k.transpose();
-/**/  std::cout << "S_k:" << std::endl << S_k << std::endl;
-      
-      W = P*H_x_k.transpose()*S_k.inverse();
-/**/  std::cout << "W:" << std::endl << W << std::endl;
-      
-      positionCorrEKF = vec2RPY(RPY2Vec(positionPredEKF) - W*h_k);
-/**/  std::cout << "positionCorrEKF:" << std::endl << positionCorrEKF << std::endl;
-
-      P = (Matrix6f::Identity() - W*H_x_k)*P;
-/**/  std::cout << "P:" << std::endl << P << std::endl;
-      
+      else // vertical elements found but no matches
+        positionCorrEKF = positionPredEKF;
     }
-    else
+    else // no vertical elements found
       positionCorrEKF = positionPredEKF;
-    
-
+    /*
+    */
     //Send pose message
     
     /************************************************************************************************/
@@ -502,27 +508,31 @@ main (int argc, char** argv)
 
 //  positionCorrEKF = positionPredEKF; // FIXME bypassing correction stage ---------------------------------------------------------------------------------------------------------//
                                                                                                                                                                                     //
-    poseCorrEKF.pose.position.x = positionCorrEKF.x;                                                                                                                                //
-    poseCorrEKF.pose.position.y = positionCorrEKF.y;                                                                                                                                //
-    poseCorrEKF.pose.position.z = 0.0; //-------------> Ignored                                                                                                                     //
+    poseCorrEKF.pose.pose.position.x = positionCorrEKF.x;                                                                                                                           //
+    poseCorrEKF.pose.pose.position.y = positionCorrEKF.y;                                                                                                                           //
+    poseCorrEKF.pose.pose.position.z = 0.0; //-------------> Ignored                                                                                                                //
+    for(int i=0; i<6; i++)                                                                                                                                                          //
+    {                                                                                                                                                                               //
+      for(int j=0; j<6; j++)                                                                                                                                                        //
+        poseCorrEKF.pose.covariance[i+j] = P(i,j);                                                                                                                                  //
+    }                                                                                                                                                                               //
     poseCorrEKF.header.frame_id = "map";                                                                                                                                            //
     poseCorrEKF.header.stamp = ros::Time::now();                                                                                                                                    //
-                                                                                                                                                                                    //
-    ekfPoint.x = poseCorrEKF.pose.position.x; // Path painting                                                                                                                      //
-    ekfPoint.y = poseCorrEKF.pose.position.y;                                                                                                                                       //
-    ekfPoint.z = poseCorrEKF.pose.position.z;                                                                                                                                       //
+    ekfPoint.x = poseCorrEKF.pose.pose.position.x; // Path painting                                                                                                                 //
+    ekfPoint.y = poseCorrEKF.pose.pose.position.y;                                                                                                                                  //
+    ekfPoint.z = poseCorrEKF.pose.pose.position.z;                                                                                                                                  //
     ekfStrip.points.push_back(ekfPoint);                                                                                                                                            //
     pub_ekfStrip.publish(ekfStrip);                                                                                                                                                 //
-                                                                                                                                                                                    
+                                                                                                                                                                                    //
     tf::Quaternion quat_msg;                                                                                                                                                        //
-    quat_msg.setRPY(positionCorrEKF.roll, positionCorrEKF.pitch, positionCorrEKF.yaw); // set a tf::Quaternion from RPY                                                             //
-    tf::quaternionTFToMsg(quat_msg, poseCorrEKF.pose.orientation); // set quaternion in msg from tf::Quaternion                                                                     //
-
-    std::cout << "poseCorrEKF: " << std::endl << poseCorrEKF << std::endl;
+    quat_msg.setRPY(0.0, 0.0, theta); // set a tf::Quaternion from RPY                                                             //
+    tf::quaternionTFToMsg(quat_msg, poseCorrEKF.pose.pose.orientation); // set quaternion in msg from tf::Quaternion                                                                //
+                                                                                                                                                                                    //
+    std::cout << "poseCorrEKF: " << std::endl << poseCorrEKF.pose.pose << std::endl;                                                                                                          //
     pub_ekfCorr.publish(poseCorrEKF);                                                                                                                                               //
                                                                                                                                                                                     //
-    transform_ekf.setOrigin(tf::Vector3(poseCorrEKF.pose.position.x, poseCorrEKF.pose.position.y, poseCorrEKF.pose.position.z));                                                    //
-    transform_ekf.setRotation(tf::Quaternion(tfScalar(poseCorrEKF.pose.orientation.x), tfScalar(poseCorrEKF.pose.orientation.y), tfScalar(poseCorrEKF.pose.orientation.z),           tfScalar(poseCorrEKF.pose.orientation.w)));                                                                                                                                         //
+    transform_ekf.setOrigin(tf::Vector3(poseCorrEKF.pose.pose.position.x, poseCorrEKF.pose.pose.position.y, poseCorrEKF.pose.pose.position.z));                                     //
+    transform_ekf.setRotation(quat_msg);                                                                                                                                            //
                                                                                                                                                                                     //
     br.sendTransform(tf::StampedTransform(transform_ekf, ros::Time::now(), "map", "ekf"));                                                                                          //
                                                                                                                                                                                     //
@@ -532,7 +542,7 @@ main (int argc, char** argv)
     if(logfile)                                                                                                                                                                     //
     {                                                                                                                                                                               //
       if (myfile.is_open()) // Log file                                                                                                                                             //
-        myfile << positionPredEKF.x << ", " << positionPredEKF.y << std::endl;                                                                                                      //
+        myfile << positionCorrEKF.x << ", " << positionCorrEKF.y << std::endl;                                                                                                      //
       else std::cout << "Unable to open file"; // ----------------------------------------------------------------------------------------------------------------------------------//
     }
     
@@ -555,6 +565,7 @@ main (int argc, char** argv)
       thetaPrev = theta;
     }
     pub_mapElements.publish(map_elements);
+    ros::spinOnce();
     loop_rate.sleep();
   }
   

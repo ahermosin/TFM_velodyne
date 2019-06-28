@@ -91,9 +91,9 @@ endif()
 # flag project as catkin-based to distinguish if a find_package()-ed project is a catkin project
 set(pcl_segment_FOUND_CATKIN_PROJECT TRUE)
 
-if(NOT "/home/alberto/workspaces/workspace14diciembre/devel/include " STREQUAL " ")
+if(NOT "/home/alberto/workspaces/workspace14diciembre/devel/include;/home/alberto/workspaces/workspace14diciembre/src/pcl_segment/include;/usr/include " STREQUAL " ")
   set(pcl_segment_INCLUDE_DIRS "")
-  set(_include_dirs "/home/alberto/workspaces/workspace14diciembre/devel/include")
+  set(_include_dirs "/home/alberto/workspaces/workspace14diciembre/devel/include;/home/alberto/workspaces/workspace14diciembre/src/pcl_segment/include;/usr/include")
   if(NOT " " STREQUAL " ")
     set(_report "Check the issue tracker '' and consider creating a ticket if the problem has not been reported yet.")
   elseif(NOT " " STREQUAL " ")
@@ -116,7 +116,7 @@ if(NOT "/home/alberto/workspaces/workspace14diciembre/devel/include " STREQUAL "
   endforeach()
 endif()
 
-set(libraries "customFunctions")
+set(libraries "customFunctions;/usr/lib/x86_64-linux-gnu/libtinyxml.so")
 foreach(library ${libraries})
   # keep build configuration keywords, target names and absolute libraries as-is
   if("${library}" MATCHES "^(debug|optimized|general)$")

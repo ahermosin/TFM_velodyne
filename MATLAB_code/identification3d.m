@@ -12,24 +12,29 @@
 % cluster
 
 
-prueba = 1;
+prueba = 2;
 num = 0;
 draw_veMap = 1;
 
 if(num == 0)
-    P = load('logFile.txt');
+    P = load('logVE.txt');
     Odom = load('logOdom.txt');
     EKF = load('logEKF.txt');
     GPS = load('logGPS.txt');
+    GPSRaw = load('logGPSRaw.txt');
 else
     P = load(strcat('test/prueba',num2str(prueba),'/',num2str(num),'logFile.txt'));
     Odom = load(strcat('test/logOdom',num2str(prueba),'.txt'));
 end
 
-veMap = load(strcat('test/veMap',num2str(prueba),'.yaml'));
+if(prueba==1)
+    theta_gps = -7.4; % test 1
+elseif(prueba==2)
+    theta_gps = -5.4; % test 2
+end
 
-theta_gps = atand((GPS(70,2)-GPS(1,2))/(GPS(70,1)-GPS(1,1))); % GPS(70,1) test1
-% theta_gps = atand((GPS(165,2)-GPS(1,2))/(GPS(165,1)-GPS(1,1))); % GPS(165,1) test2
+veMap = load(strcat('map',num2str(prueba),'.csv'));
+
 rotation = [cosd(theta_gps) sind(theta_gps); -sind(theta_gps) cosd(theta_gps)];
 
 OdomCoord = [Odom(:,1) Odom(:,2)]; 
@@ -37,11 +42,22 @@ GPSCoord = [GPS(:,1) GPS(:,2)];
 EKFCoord = [EKF(:,1) EKF(:,2)];
 PCoord = [P(:,2) P(:,3)];
 
+offsetGPS = GPSRaw(1,1:2)
+
 OdomCoord = OdomCoord*rotation;
 % GPSCoord = GPSCoord*rotation;
 EKFCoord = EKFCoord*rotation;
 PCoord = PCoord*rotation;
 veMap = veMap*rotation;
+
+OdomCoord = OdomCoord + ones(size(OdomCoord,1),1)*offsetGPS;
+EKFCoord = EKFCoord + ones(size(EKFCoord,1),1)*offsetGPS;
+PCoord = PCoord + ones(size(PCoord,1),1)*offsetGPS;
+veMap = veMap + ones(size(veMap,1),1)*offsetGPS;
+GPSCoord = GPSRaw(:,1:2);
+
+%Interpolate to get the errors
+% OdomInt = 
 
 radius = 0.5;
 theta = linspace(0,2*pi);
@@ -53,11 +69,11 @@ if(size(P,2) == 6)
         if(P(i,1)==0)
             plot3(PCoord(i,1),PCoord(i,2),100*P(i,4),'+r')
         else
-            plot3(PCoord(i,1),PCoord(i,2),100*P(i,4),'+g')
+            plot3(PCoord(i,1),PCoord(i,2),100*P(i,4),'g+')
         end
     end
-    xlim([-30 150])
-    ylim([-20 50])
+%     xlim([-30 150])
+%     ylim([-20 50])
     grid
     
     if(draw_veMap)
@@ -89,8 +105,8 @@ if(size(P,2) == 6)
             plot3(PCoord(i,1),PCoord(i,2),P(i,5),'+g')
         end
     end
-    xlim([-30 150])
-    ylim([-20 50])
+%     xlim([-30 150])
+%     ylim([-20 50])
     grid
     
     if(draw_veMap)
@@ -122,8 +138,8 @@ if(size(P,2) == 6)
             plot3(PCoord(i,1),PCoord(i,2),100*P(i,6),'+g')
         end
     end
-    xlim([-30 150])
-    ylim([-20 50])
+%     xlim([-30 150])
+%     ylim([-20 50])
     grid
     
     if(draw_veMap)

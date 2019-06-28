@@ -24,7 +24,7 @@ Matrix6f J2_n(pcl_segment::positionRPY pos1, pcl_segment::positionRPY pos2);
 Matrix6f computeHx2(pcl_segment::observationRPY obs, pcl_segment::positionRPY pos);
 Vector6f computeInnovation(pcl_segment::positionRPY pos, pcl_segment::observationRPY obs, pcl_segment::observationRPY map);
 Matrix6f computeHz2(pcl_segment::observationRPY obs, pcl_segment::positionRPY pos);
-float mahalanobisDistance(pcl_segment::observationRPY obs, pcl_segment::observationRPY map, Matrix6f S);
+float mahalanobisDistance(const MatrixXf& h, const MatrixXf& S);
 float AngRango(float ang);
 pcl_segment::positionRPY vec2RPY(Vector6f pos);
 Vector6f RPY2Vec(pcl_segment::positionRPY pos);

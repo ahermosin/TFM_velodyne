@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   cmake_modules
   )
-find_package(TinyXML2 REQUIRED)
+find_package(TinyXML REQUIRED)
 
 
 ## System dependencies are found with CMake's conventions
@@ -111,11 +111,11 @@ find_package(TinyXML2 REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
   LIBRARIES customFunctions
 #  CATKIN_DEPENDS roscpp std_msgs
 #  DEPENDS system_lib
-#  DEPENDS TinyXML
+  DEPENDS TinyXML
 )
 
 ###########
@@ -128,7 +128,7 @@ include_directories(
  include
   ${PCL_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
-  ${TinyXML2_INCLUDE_DIRS}
+  ${TinyXML_INCLUDE_DIRS}
   
 )
 add_library(customFunctions customFunctions.cpp)
@@ -224,12 +224,12 @@ add_executable (pointcloud_collect pointcloud_collect.cpp)
 add_executable (odom odom.cpp)
 add_executable (odom2 odom2.cpp)
 add_executable (GPSLogger GPSLogger.cpp)
-add_executable (ekf ekf6.cpp)
+add_executable (ekf ekf7.cpp)
 target_link_libraries (euclidean_clustering ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 target_link_libraries (pointcloud_merge ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 target_link_libraries (pointcloud_collect ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 target_link_libraries (odom ${catkin_LIBRARIES} customFunctions)
 target_link_libraries (odom2 ${catkin_LIBRARIES} customFunctions)
 target_link_libraries (GPSLogger ${catkin_LIBRARIES})
-target_link_libraries (ekf ${catkin_LIBRARIES} customFunctions)
+target_link_libraries (ekf ${catkin_LIBRARIES} ${TinyXML_LIBRARIES} customFunctions)
 

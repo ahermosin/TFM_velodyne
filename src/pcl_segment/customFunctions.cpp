@@ -10,13 +10,8 @@
 
 pcl_segment::positionRPY Comp(pcl_segment::positionRPY position1, pcl_segment::positionRPY position2){ // Composition of two positions: T_ac = T_ab ⊕ T_bc
   Matrix4f T_ab = createHomogMatr(position1);
-//  std::cout << "T_ab: " << std::endl << T_ab << std::endl;
-  
   Matrix4f T_bc = createHomogMatr(position2);
-//  std::cout << "T_bc: " << std::endl << T_bc << std::endl;
-
-//  std::cout << "T_ac: " << std::endl << T_ab*T_bc << std::endl;
-
+  
   return(coordRPY(T_ab*T_bc)); 
 }
 
@@ -24,18 +19,7 @@ pcl_segment::positionRPY Comp(pcl_segment::positionRPY position1, pcl_segment::p
 
 Matrix4f createHomogMatr(pcl_segment::positionRPY position){ // Homogeneous matrix (4x4) of a position given as x, y, z, roll, pitch, yaw 
   Matrix4f result = result.Identity();  
-
-  /*
-  float r = position.roll; // a -------> around X-axis
-  float p = position.pitch; // phi ----> around Y-axis
-  float y = position.yaw; // theta ----> around Z-axis
-
-  result(0,0) = cos(r)*cos(p);        result(0,1) = -sin(r)*cos(y) + cos(r)*sin(p)*sin(y);        result(0,2) = sin(r)*sin(y) + cos(r)*sin(p)*cos(y);
-  result(1,0) = sin(r)*cos(p);        result(1,1) = cos(r)*cos(y) + sin(r)*sin(p)*sin(y);         result(1,2) = -cos(r)*sin(y) + sin(r)*sin(p)*cos(y);
-  result(2,0) = -sin(p);              result(2,1) = cos(p)*sin(y);                                result(2,2) = cos(p)*cos(y);
-  result(3,0) = 0.0;                  result(3,1) = 0.0;                                          result(3,2) = 0.0; 
-  */
-  
+    
   float x = position.x;
   float y = position.y;
   float z = position.z;
@@ -56,8 +40,7 @@ Matrix4f createHomogMatr(pcl_segment::positionRPY position){ // Homogeneous matr
   Rz(0,0) = cos(theta);  Rz(1,0) = -sin(theta);
   Rz(0,1) = sin(theta);  Rz(1,1) =  cos(theta);
 
-  result = Rx*Ry*Rz; // <<<<<<<<-------------------- OJO
-  //result = Rz*Ry*Rx; // <<<<<<<<-------------------- OJO
+  result = Rx*Ry*Rz;
   
   result(0,3) = x;
   result(1,3) = y;
@@ -100,32 +83,18 @@ pcl_segment::positionRPY coordRPY(Matrix4f homogMatr){ // Position x, y, z, roll
   float nx = homogMatr(0,0); float ox = homogMatr(0,1); float ax = homogMatr(0,2);
   float ny = homogMatr(1,0); float oy = homogMatr(1,1); float ay = homogMatr(1,2);
   float nz = homogMatr(2,0); float oz = homogMatr(2,1); float az = homogMatr(2,2);
-  /*
-  result.roll = atan2(ny, nx);
-  result.pitch = atan2(-nz, nx*cos(result.roll) + ny*sin(result.roll));
-  result.yaw = atan2(ax*sin(result.roll) - ay*cos(result.roll), -ox*sin(result.roll) + oy*cos(result.roll));
-  */
   
-  
-  //OPTION RxRyRz
   result.roll = atan2(-ay, az);
   result.pitch = atan2(ax, -ay*sin(result.roll) + az*cos(result.roll));
   result.yaw = atan2(ny*cos(result.roll) + nz*sin(result.roll), oy*cos(result.roll) + oz*sin(result.roll));
-  
-  //OPTION RzRyRx
-  /*
-  result.roll = atan2(oz, az);
-  result.pitch = atan2(-nz, oz*sin(result.roll) + az*cos(result.roll));
-  result.yaw = atan2(ax*sin(result.roll) - ox*cos(result.roll), oy*cos(result.roll) - ay*sin(result.roll));
-  */
-  
+    
   return result;
 }
 
 /*----------------------------------------------------------------------------------------------*/
 
 Matrix6f J1_n(pcl_segment::positionRPY ab, pcl_segment::positionRPY bc){ // Jacobian 
-  Matrix6f result; result = result.Zero();
+  Matrix6f result; result = result.Identity();
   Matrix4f H1 = createHomogMatr(ab);
   Matrix4f H2 = createHomogMatr(bc);
   
@@ -186,16 +155,19 @@ Matrix6f computeHz2(pcl_segment::observationRPY obs, pcl_segment::positionRPY ka
 
 /*----------------------------------------------------------------------------------------------*/
 
-float mahalanobisDistance(pcl_segment::observationRPY candidate, pcl_segment::observationRPY map, Matrix6f S){ 
+float mahalanobisDistance(const MatrixXf& h, const MatrixXf& S){ 
   
-  Vector6f diff;
-//  std::cout << "candidate: " << candidate << std::endl;
-//  std::cout << "map element: " << map << std::endl;
-  float result;
+//  Vector6f diff;
+//  float result;
+  MatrixXf hTSih(1, 1); hTSih = hTSih.Zero(1, 1);
+//  std::cout << "h:" << std::endl << h << std::endl;
+//  std::cout << "S:" << std::endl << S << std::endl;
+//  diff = RPY2Vec(map.position) - RPY2Vec(candidate.position);
+  hTSih = h.transpose()*S.inverse()*h;
+//  hTSih = hTSih.sqrt();
+//  std::cout<< "fun mahalan: " << (h.transpose()*S.inverse()*h) << std::endl;
   
-  diff = RPY2Vec(map.position) - RPY2Vec(candidate.position);
-  result = sqrt(diff.transpose()*S.inverse()*diff);
-  return result;
+  return hTSih(0, 0);
 }
 
 /*----------------------------------------------------------------------------------------------*/
