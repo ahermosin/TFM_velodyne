@@ -192,14 +192,14 @@ main (int argc, char** argv)
   ros::param::get("sigma_obs_pitch", sigma_obs.pitch);
   ros::param::get("sigma_obs_yaw", sigma_obs.yaw); // observation sigmas
   
-  Matrix <float, 6, 6> B; // Binding matrix for EKF
+  Matrix <float, 4, 6> B; // Binding matrix for EKF
   
   B << 1, 0, 0, 0, 0, 0, // x
        0, 1, 0, 0, 0, 0, // y
-       0, 0, 1, 0, 0, 0, // z
+//       0, 0, 1, 0, 0, 0, // z
        0, 0, 0, 1, 0, 0, // roll
-       0, 0, 0, 0, 1, 0, // pitch
-       0, 0, 0, 0, 0, 1; // yaw  ------> Binding matrix: we store the components of elements in which we're interested (optional)
+       0, 0, 0, 0, 1, 0; // pitch
+//       0, 0, 0, 0, 0, 1; // yaw  ------> Binding matrix: we store the components of elements in which we're interested (optional)
 
   int B_rows = B.rows();
 

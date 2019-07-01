@@ -10,6 +10,9 @@
   <node pkg="pcl_segment" type="GPSLogger" name="GPSLogger" />
   <node pkg="pcl_segment" type="pointcloud_merge" name="pointcloud_merge"/>
   <node pkg="pcl_segment" type="euclidean_clustering" name="euclidean_clustering"/>
-  <node pkg="pcl_segment" type="ekf" name="ekf" output="screen"/>
+  <group if="$(arg tfEKF)">
+    <!-- stuff that will only be evaluated if foo is true -->
+    <node pkg="pcl_segment" type="ekf" name="ekf" output="screen"/>
+  </group>
   <node pkg="rosbag" type="play" name="player" args="--clock /home/alberto/workspaces/workspace14diciembre/Validacion/prueba1_select.bag"/>
 </launch>

@@ -25,14 +25,14 @@ nCollect: 5
 subscription: pointcloudmerged
 
 # Mahalanobis distance threshold
-mahalanobisDistanceThreshold: 7.0
+mahalanobisDistanceThreshold: 7.7
 
 # Info text in RViz size
 textScale: 0.5
 
 use_sim_time: true
 
-# Cropping
+# Cropping (cube centered in base_link)
 low_lim_x: -0.40
 low_lim_y: -0.60
 low_lim_z: -0.30
@@ -63,7 +63,7 @@ NormalDistanceWeightLine: 0.01
 MaxIterationsLine: 1000
 
 # Car
-lidarHeight: 1.9 #1.9 m
+lidarHeight: 1.8 #1.8 m
 turnRate: 21.0 #21
 angleOffset: -9.75 #-9.75
 wheelsA: 1.7 #1.7
@@ -77,7 +77,7 @@ P22_init: 1.0
 P33_init: 1.0
 P44_init: 1.0
 P55_init: 0.1
-PFactor: 0.70 # Multiplies the whole matrix P by PFactor
+PFactor: 0.0 # Multiplies the whole matrix P by PFactor
 ## For Q (model)
 sigma_odom_x: 0.05
 sigma_odom_y: 0.008
