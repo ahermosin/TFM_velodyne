@@ -9,7 +9,7 @@ tiltLim: 10.0
 
 # Voxelgrid
 leafSize: 0.1
-minPointsVoxel: 1
+minPointsVoxel: 2
 
 # Fitting max distance
 DistanceThresholdLine: 0.15
@@ -25,7 +25,7 @@ nCollect: 5
 subscription: pointcloudmerged
 
 # Mahalanobis distance threshold
-mahalanobisDistanceThreshold: 7.7
+mahalanobisDistanceThreshold: 34.86
 
 # Info text in RViz size
 textScale: 0.5
@@ -33,12 +33,12 @@ textScale: 0.5
 use_sim_time: true
 
 # Cropping (cube centered in base_link)
-low_lim_x: -0.40
-low_lim_y: -0.60
-low_lim_z: -0.30
+low_lim_x: -1.40
+low_lim_y: -1.00
+low_lim_z: -0.50
 up_lim_x: 2.20
-up_lim_y: 0.60
-up_lim_z: 0.30
+up_lim_y: 1.00
+up_lim_z: 0.50
 
 # Downsampling
 do_downsampling: true
@@ -51,7 +51,7 @@ MaxIterationsGround: 50
 DistanceThresholdGround: 0.7
 
 # Euclidean clustering
-clusterTolerance: 0.3 #0.25
+clusterTolerance: 0.25 #0.25
 
 
 # KSearch for normals extraction in clusters
@@ -64,8 +64,8 @@ MaxIterationsLine: 1000
 
 # Car
 lidarHeight: 1.8 #1.8 m
-turnRate: 21.0 #21
-angleOffset: -9.75 #-9.75
+turnRate: 18.50 #21 en el antiguo
+angleOffset: 0.0 #-9.75 en el antiguo
 wheelsA: 1.7 #1.7
 wheelsL: 2.46 #2.46
 
@@ -81,15 +81,15 @@ P22_init: 1.0
 P33_init: 1.0
 P44_init: 1.0
 P55_init: 0.1
-PFactor: 0.0001 # Multiplies the whole matrix P by PFactor
+PFactor: 0.0000 # Multiplies the whole matrix P by PFactor
 ## For Q (model)
-sigma_odom_x: 0.1
-sigma_odom_y: 0.2
+sigma_odom_x: 2.100
+sigma_odom_y: 0.8
 sigma_odom_z: 1.0
-sigma_odom_roll: 1.0
+sigma_odom_roll: 0.0
 sigma_odom_pitch: 1.0
-sigma_odom_yaw: 0.00
-QFactor: 0.00015 # Multiplies the whole matrix Q by QFactor
+sigma_odom_yaw: 1.0
+QFactor: 0.00001 # Multiplies the whole matrix Q by QFactor
 
 ## For R (device)
 sigma_obs_x: 0.05

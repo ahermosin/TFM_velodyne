@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="1.35 -0.51 0 -0.15 0 0 base_link velodyne_i 100" />
+  <node pkg="tf" type="static_transform_publisher" name="link2_broadcaster" args="1.25 0.51 0 0 0 0 base_link velodyne_d 100" />
+</launch>

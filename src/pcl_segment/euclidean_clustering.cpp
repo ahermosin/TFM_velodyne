@@ -36,7 +36,8 @@
 #include <iostream>
 #include <fstream>
 
-ofstream myfile ("/home/alberto/workspaces/workspace14diciembre/logVE.txt"); 
+FILE * myfile;
+bool logfile;
 tf::StampedTransform transform;
 geometry_msgs::PoseArray msg_ve;
 geometry_msgs::PoseArray msg_ve_BL;
@@ -370,9 +371,6 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
   float tiltLim;
   ros::param::get("tiltLim",tiltLim);
 
-  
-  bool logfile;
-  ros::param::get("logfile",logfile);
   visualization_msgs::Marker marker_aux;
   neClusters.setSearchMethod (treeCloudCluster);
   neClusters.setKSearch (KSearchClusterFit);
@@ -518,7 +516,8 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
         pose.pose.position.y = base_link_point[1];
         pose.pose.position.z = base_link_point[2];
         
-        msg_aux_BL.poses.push_back(pose.pose);
+        if(isVerticalElement)
+          msg_aux_BL.poses.push_back(pose.pose);
         
         mapPoint = transform*base_link_point;
 
@@ -534,20 +533,20 @@ void callback(const sensor_msgs::PointCloud2ConstPtr& input)
         marker_aux.text = ss.str();
         marker_array_aux.markers.push_back(marker_aux);
 
-        msg_aux.poses.push_back(pose.pose);
+        if(isVerticalElement)
+          msg_aux.poses.push_back(pose.pose);
+        
         n++;
         
         if (logfile)
         {
-          if (myfile.is_open()) // Log file
-          {
-            if(isVerticalElement)
-              myfile << 1 << ", " << mapPoint[0] << ", " << mapPoint[1] << ", " << error << ", " << inliersLine->indices.size() << ", " << ratio << std::endl;
-            else
-              myfile << 0 << ", " << mapPoint[0] << ", " << mapPoint[1] << ", " << error << ", " << inliersLine->indices.size() << ", " << ratio << std::endl;
-          }
-          else cout << "Unable to open file";
+          if(isVerticalElement)
+            fprintf(myfile, "%d , %f , %f , %f , %d , %f\n", 1, mapPoint[0], mapPoint[1], error, inliersLine->indices.size(), ratio);
+          else
+            fprintf(myfile, "%d , %f , %f , %f , %d , %f\n", 0, mapPoint[0], mapPoint[1], error, inliersLine->indices.size(), ratio);
         }
+        
+        
       } // end if(zdLine > cos(tiltLim*3.1415/180.0))
     } // end if(coefficientsLine->values.size() != 0)
     j++;
@@ -583,6 +582,9 @@ main (int argc, char** argv)
   ros::Rate loop_rate(10);
   visualization_msgs::Marker marker_main;
 	tf::TransformListener listener;
+  ros::param::get("logfile", logfile);
+  if (logfile)
+    myfile = fopen ("/home/alberto/workspaces/workspace14diciembre/logVE.txt", "w"); 
 
 
   while (ros::ok())
@@ -614,6 +616,5 @@ main (int argc, char** argv)
     loop_rate.sleep();
     
   }
-  myfile.close();
   return(0);
 }

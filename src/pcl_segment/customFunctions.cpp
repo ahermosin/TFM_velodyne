@@ -86,7 +86,7 @@ pcl_segment::positionRPY coordRPY(Matrix4f homogMatr){ // Position x, y, z, roll
   
   result.roll = atan2(-ay, az);
   result.pitch = atan2(ax, -ay*sin(result.roll) + az*cos(result.roll));
-  result.yaw = atan2(ny*cos(result.roll) + nz*sin(result.roll), oy*cos(result.roll) + oz*sin(result.roll));
+  result.yaw = -atan2(ny*cos(result.roll) + nz*sin(result.roll), oy*cos(result.roll) + oz*sin(result.roll));
     
   return result;
 }

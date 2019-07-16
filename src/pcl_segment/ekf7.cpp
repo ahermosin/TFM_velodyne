@@ -19,6 +19,7 @@
 #include <pcl_segment/observationRPY.h>
 #include <lcm_to_ros/can_coche_direccion.h>
 #include <lcm_to_ros/can_coche_velocidad.h>
+#include <lcm_to_ros/gps_data.h>
 #include <Eigen/Eigen>
 #include <Eigen/Dense>
 #include <fstream>
@@ -113,6 +114,7 @@ main (int argc, char** argv)
   ros::Time initTime = ros::Time::now();
   ros::Time currentTime, pastTime;
   
+  
   /*INITIALIZATION*/  
   geometry_msgs::PoseStamped poseZero;
 
@@ -158,7 +160,7 @@ main (int argc, char** argv)
   incOdomPrev = poseZero; // incOdomPrev init
   incOdom = poseZero; // incOdom init
   incOdom2 = poseZero; // incOdom2 init
-  incOdom2Prev = poseZero; // incOdom2OPrev init
+  incOdom2Prev = poseZero; // incOdom2Prev init
     
   positionZero.x = 0.0;
   positionZero.y = 0.0;
@@ -167,16 +169,26 @@ main (int argc, char** argv)
   positionZero.pitch = 0.0;
   positionZero.yaw = 0.0;
   
-  positionEKF = positionZero; // position init
+  ros::param::get("x_init", positionEKF.x); // positionEKF init
+  ros::param::get("y_init", positionEKF.y);
+  ros::param::get("z_init", positionEKF.z);
+  ros::param::get("roll_init", positionEKF.roll);
+  ros::param::get("pitch_init", positionEKF.pitch);
+  ros::param::get("yaw_init", positionEKF.yaw);
+  positionEKF.yaw = positionEKF.yaw*3.141592/180.0;
   incOdomEKF = positionZero;  // incOdomEKF init
   incOdomEKFPrev = positionZero; // incOdomEKFPrev init
   positionPredEKF = positionZero; // positionPredEKF init
   positionCorrEKF = positionZero; // positionCorrEKF init
   
+  float easting_ref, northing_ref;
+  ros::param::get("easting_ref", easting_ref);
+  ros::param::get("northing_ref", northing_ref);
+  
   visualization_msgs::MarkerArray map_ids;
   visualization_msgs::Marker map_id;
   visualization_msgs::Marker deleter;
-//  deleter.action = visualization_msgs::Marker::DELETEALL;
+  deleter.action = visualization_msgs::Marker::DELETEALL;
 
   ros::param::get("sigma_odom_x", sigma_odom.x);
   ros::param::get("sigma_odom_y", sigma_odom.y);
@@ -221,19 +233,22 @@ main (int argc, char** argv)
 
   Matrix6f Fx, Fu;
   
-  int test; // 1 or 2
+  int test; // 1 to 10
   ros::param::get("test", test);
-  std::vector<pcl_segment::observationRPY> map; // FIXME fill with VE positions in document
+  std::vector<pcl_segment::observationRPY> map; // fill with VE positions in document
   geometry_msgs::PoseArray map_elements;
   geometry_msgs::PoseStamped map_element;
   pcl_segment::observationRPY map_aux;
   
   std::string inputFileName; // ------------------------------------------------------> Read CSV file with coordinates of the vertical elements
   if(test==1) //FIXME
-    inputFileName = "/home/alberto/workspaces/workspace14diciembre/map1.csv";
-  else
+    inputFileName = "/home/alberto/workspaces/workspace14diciembre/map1_1.csv";
+  else if(test==2)
+    inputFileName = "/home/alberto/workspaces/workspace14diciembre/map1_2.csv";
+  else if(test > 2 && test < 8)
     inputFileName = "/home/alberto/workspaces/workspace14diciembre/map2.csv";
-  
+  else
+    inputFileName = "/home/alberto/workspaces/workspace14diciembre/map3.csv";  
   std::ifstream inputFile(inputFileName.c_str());
   
   int l = 0;
@@ -256,16 +271,16 @@ main (int argc, char** argv)
           e.what();
         }
       }
-      map_aux.position.x = record[0];
-      map_aux.position.y = record[1];
+      map_aux.position.x = record[0] - easting_ref;
+      map_aux.position.y = record[1] - northing_ref;
       map_aux.position.z = -1.8;
       map_aux.position.roll = 0.0;
       map_aux.position.pitch = 0.0;
       map_aux.position.yaw = 0.0;
       map.push_back(map_aux);
       
-      map_element.pose.position.x = record[0];
-      map_element.pose.position.y = record[1];
+      map_element.pose.position.x = record[0] - easting_ref;
+      map_element.pose.position.y = record[1] - northing_ref;
       map_element.pose.position.z = -1.8;
       map_element.pose.orientation.x = 0.0;
       map_element.pose.orientation.y = 0.0;
@@ -282,8 +297,8 @@ main (int argc, char** argv)
       map_id.color.r = 1.0f;
       map_id.color.g = 1.0f;
       map_id.color.b = 1.0f;
-      map_id.pose.position.x = record[0];
-      map_id.pose.position.y = record[1];
+      map_id.pose.position.x = record[0] - easting_ref;
+      map_id.pose.position.y = record[1] - northing_ref;
       map_id.pose.position.z = 1.0;
       map_id.pose.orientation.w = 1.0;
       label << "ID: " << l;
@@ -301,6 +316,8 @@ main (int argc, char** argv)
   }
   map_elements.header.frame_id = "map";
   int mapSize = map.size();
+  std::cout << "Loaded " << mapSize << " elements:" << std::endl;
+  std::cout << map_elements << std::endl;
   
   R(0, 0) = sigma_obs.x*sigma_obs.x;
   R(1, 1) = sigma_obs.y*sigma_obs.y;
@@ -337,12 +354,17 @@ main (int argc, char** argv)
 
   float textScale;
   bool logfile;
-  std::ofstream myfile ("/home/alberto/workspaces/workspace14diciembre/logEKF.txt");
+  FILE * myfile;
+  ros::param::get("tfEKF", tfEKF);
+  ros::param::get("logfile", logfile);
+  if (logfile)
+    myfile = fopen ("/home/alberto/workspaces/workspace14diciembre/logEKF.txt", "w");
   
   int aux;
   double theta, thetaPrev, dT, wheelsL;
-  theta = 0.0;
-  thetaPrev = 0.0;
+  ros::param::get("yaw_init", thetaPrev);
+  thetaPrev = thetaPrev*3.141592/180.0;
+  theta = thetaPrev;
   dT = 1.0/loopRate;
   vel = 0.0;
   dir = 0.0;
@@ -354,31 +376,20 @@ main (int argc, char** argv)
   //*************************//
   while(ros::ok()){
     ros::param::get("mahalanobisDistanceThreshold", mahalanobisDistanceThreshold);
-    ros::param::get("tfEKF", tfEKF);
-    ros::param::get("logfile", logfile);
     ros::param::get("wheelsL", wheelsL);
-    currentTime = ros::Time::now();
-//    obs_matches.markers.push_back(deleter);
-//    pub_obsMatches.publish(obs_matches);
+    ros::param::get("textScale", textScale);
+    obs_matches.markers = {};
+    obs_matches.markers.push_back(deleter);
+    pub_obsMatches.publish(obs_matches);
+    obs_matches.markers = {};
     /*PREDICTION*/ // needs: incOdom
 
-    pub_ekfIncOdom.publish(incOdom); // -----------------------------------> Check that incOdom is the same that in odom node
-    pub_ekfPoseOdom.publish(poseOdom); // ---------------------------------> Check that poseOdom is the same that in odom node
+    theta = thetaPrev - vel*dT/wheelsL*tan(dir);                                     // Calculate incOdom locally
     
-    theta = thetaPrev + vel*dT/wheelsL*tan(dir);                                     // Calculate incOdom locally
-    incOdom2.pose.position.x = vel*dT*cos(theta);
-    incOdom2.pose.position.y = vel*dT*sin(theta);
-    incOdom2.pose.position.z = 0.0;
-    quat.setRPY(0.0, 0.0, vel*dT/wheelsL*tan(dir));
-    tf::quaternionTFToMsg(quat, incOdom2.pose.orientation);
-    incOdom2.header.stamp = ros::Time::now();
-  
-    pub_ekfIncOdom2.publish(incOdom2); // -----------------------------------> Check that incOdom is the same that in odom node
-    
-    incOdomEKF.x = vel*dT*cos(theta);
-    incOdomEKF.y = vel*dT*sin(theta);
+    incOdomEKF.x = vel*dT*cos(thetaPrev - theta);
+    incOdomEKF.y = vel*dT*sin(thetaPrev - theta);
     incOdomEKF.z = 0.0;
-    quat.setRPY(0.0, 0.0, theta);
+    quat.setRPY(0.0, 0.0, -vel*dT/wheelsL*tan(dir));
     tf::Matrix3x3 quaternionToRPY(quat); // initialize a tf::Matrix3x3 object with quat quaternion
     quaternionToRPY.getRPY(incOdomEKF.roll, incOdomEKF.pitch, incOdomEKF.yaw); // get RPY angles from tf::Matrix3x3 object
 
@@ -386,13 +397,22 @@ main (int argc, char** argv)
 
     positionPredEKF = Comp(positionEKF, incOdomEKF); // -----------------------> Position prediction
     
+    posePredEKF.pose.pose.position.x = positionPredEKF.x;
+    posePredEKF.pose.pose.position.y = positionPredEKF.y;
+    posePredEKF.pose.pose.position.z = positionPredEKF.z;
+    
+    quat.setRPY(0.0, 0.0, -positionPredEKF.yaw);
+    tf::quaternionTFToMsg(quat, posePredEKF.pose.pose.orientation);
+    pub_ekfPred.publish(posePredEKF);
+    std::cout << "PosePred:" << std::endl << posePredEKF.pose.pose << std::endl;
+    
     pub_ekfPosition.publish(positionPredEKF);
     
     Fx = J1_n(positionEKF, incOdomEKF);
     Fu = J2_n(positionEKF, incOdomEKF);
     
     P = Fx*P*Fx.transpose() + Fu*Q*Fu.transpose(); // -----------------------> Prediction of state's covariance
-    std::cout << "P: " << std::endl << P << std::endl;
+//    std::cout << "P: " << std::endl << P << std::endl;
     /************************************************************************************************/
     /*UPDATE*/ // needs: observations
     std::vector<pcl_segment::observationRPY> observations;
@@ -429,6 +449,7 @@ main (int argc, char** argv)
     }
 
     int obsSize = observations.size();
+    int M; //<----------------------- M: Number of valid associations
     
     MatrixXf h_ij(B_rows*obsSize*mapSize, 1);  h_ij = h_ij.Zero(obsSize*mapSize, 1);
     MatrixXf H_x_ij(B_rows, 6);                H_x_ij = H_x_ij.Zero(B_rows, 6);
@@ -449,23 +470,23 @@ main (int argc, char** argv)
       {
         for (int j=0; j<mapSize; j++)
         {
-          std::cout << "observations[" << i << "]:" << std::endl << observations[i] << std::endl;
-          std::cout << "map[" << j << "]:" << std::endl << map[j] << std::endl;
+//**/      std::cout << "observations[" << i << "]:" << std::endl << observations[i] << std::endl;
+//**/      std::cout << "map[" << j << "]:" << std::endl << map[j] << std::endl;
           h_ij = B*RPY2Vec(Comp(Inv(map[j].position), Comp(positionPredEKF, observations_BL[i].position)));
-/**/      std::cout << "h_ij: " << std::endl << h_ij << std::endl;
+//**/      std::cout << "h_ij: " << std::endl << h_ij << std::endl;
           H_x_ij = B*J2_n(Inv(map[j].position), Comp(positionPredEKF, observations_BL[i].position))*J1_n(positionPredEKF, observations_BL[i].position);
-/**/      std::cout << "H_x_ij: " << std::endl << H_x_ij << std::endl;
+//**/      std::cout << "H_x_ij: " << std::endl << H_x_ij << std::endl;
           H_z_ij = B*J2_n(Inv(map[j].position), Comp(positionPredEKF, observations_BL[i].position))*J2_n(positionPredEKF, observations_BL[i].position);
-/**/      std::cout << "H_z_ij: " << std::endl << H_z_ij << std::endl;
+//**/      std::cout << "H_z_ij: " << std::endl << H_z_ij << std::endl;
           S_ij = H_x_ij*P*H_x_ij.transpose() + H_z_ij*R*H_z_ij.transpose();                   
-/**/      std::cout << "S_ij: " << std::endl << S_ij << std::endl;
-          std::cout << "mahalanobisDistance[" << i << "][" << j << "]: " << sqrt(mahalanobisDistance(h_ij, S_ij)) << std::endl;
+//**/      std::cout << "S_ij: " << std::endl << S_ij << std::endl;
+//**/      std::cout << "mahalanobisDistance[" << i << "][" << j << "]: " << sqrt(mahalanobisDistance(h_ij, S_ij)) << std::endl;
           if(sqrt(mahalanobisDistance(h_ij, S_ij)) < mahalanobisDistanceThreshold && sqrt(mahalanobisDistance(h_ij, S_ij)) < minMahalanobis) //Theres is a match, but it must be the minimum value of all possible matches
           {
             if(match)
-              std::cout << "***************************************REMATCH!***************************************" << std::endl;
+              std::cout << "***************************************REMATCH! ["<< i <<"]["<< j <<"]***************************************" << std::endl;
             else
-              std::cout << "***************************************MATCH!***************************************" << std::endl;
+              std::cout << "***************************************MATCH! ["<< i <<"]["<< j <<"]***************************************" << std::endl;
               
             match = true;
             i_min = i;
@@ -477,6 +498,7 @@ main (int argc, char** argv)
         {
           i_vec.push_back(i_min);
           j_vec.push_back(j_min);
+          
           obs_match.pose.position.x = observations[i].position.x;
           obs_match.pose.position.y = observations[i].position.y;
           obs_match.pose.position.z = 1.0;
@@ -494,6 +516,7 @@ main (int argc, char** argv)
           obs_match.text = label.str();
           obs_match.scale.z = textScale;
           obs_matches.markers.push_back(obs_match);
+          
           match = false;
         }
         
@@ -501,7 +524,8 @@ main (int argc, char** argv)
         minMahalanobis = mahalanobisDistanceThreshold;
       } // Minimum matches are stored in i_vec and j_vec, such that (i_vec(k), j_vec(k)) is the k-th association
       
-      int M = i_vec.size(); // -------> M: number of valid associations.
+      M = i_vec.size(); // -------> M: number of valid associations.
+      
       if(M > 0) // There has been at least 1 match (M=1)
       {
         std::cout << "i_vec: ";
@@ -525,43 +549,43 @@ main (int argc, char** argv)
         
         for(int i=0; i<M; i++)
         {
-/**/      std::cout << "h_i = B*RPY2Vec(Comp(Inv(map[" << j_vec[i] << "].position), Comp(positionPredEKF, observations_BL[" << i_vec[i] << "].position)))" << std::endl;
-/**/      std::cout << "map[" << j_vec[i] << "].position: " << std::endl << map[j_vec[i]].position << std::endl;
-/**/      std::cout << "Inv(map[" << j_vec[i] << "].position): " << std::endl << Inv(map[j_vec[i]].position) << std::endl;
-/**/      std::cout << "positionPredEKF: " << std::endl << positionPredEKF << std::endl;
-/**/      std::cout << "observations_BL[" << i_vec[i] << "].position: " << std::endl << observations_BL[i_vec[i]].position << std::endl;
-/**/      std::cout << "Comp(positionPredEKF, observations_BL[" << i_vec[i] << "].position): " << std::endl << Comp(positionPredEKF, observations_BL[i_vec[i]].position) << std::endl;
-          h_i = B*RPY2Vec(Comp(Inv(map[j_vec[i]].position), Comp(positionPredEKF, observations_BL[i_vec[i]].position))); // ----> Observations as seen from base_link FIXME
+//**/      std::cout << "h_i = B*RPY2Vec(Comp(Inv(map[" << j_vec[i] << "].position), Comp(positionPredEKF, observations_BL[" << i_vec[i] << "].position)))" << std::endl;
+//**/      std::cout << "map[" << j_vec[i] << "].position: " << std::endl << map[j_vec[i]].position << std::endl;
+//**/      std::cout << "Inv(map[" << j_vec[i] << "].position): " << std::endl << Inv(map[j_vec[i]].position) << std::endl;
+//**/      std::cout << "positionPredEKF: " << std::endl << positionPredEKF << std::endl;
+//**/      std::cout << "observations_BL[" << i_vec[i] << "].position: " << std::endl << observations_BL[i_vec[i]].position << std::endl;
+//**/      std::cout << "Comp(positionPredEKF, observations_BL[" << i_vec[i] << "].position): " << std::endl << Comp(positionPredEKF, observations_BL[i_vec[i]].position) << std::endl;
+          h_i = B*RPY2Vec(Comp(Inv(map[j_vec[i]].position), Comp(positionPredEKF, observations_BL[i_vec[i]].position))); // ----> Observations as seen from base_link
           h_k.block(i*B_rows, 0, B_rows, 1) = h_i;
-/**/      std::cout << "h_i: " << std::endl << h_i << std::endl;
-/**/      std::cout << "h_k: " << std::endl << h_k << std::endl;
+//**/      std::cout << "h_i: " << std::endl << h_i << std::endl;
+//**/      std::cout << "h_k: " << std::endl << h_k << std::endl;
           H_x_i = B*J2_n(Inv(map[j_vec[i]].position), Comp(positionPredEKF, observations_BL[i_vec[i]].position))*J1_n(positionPredEKF, observations_BL[i_vec[i]].position);
           H_x_k.block(i*B_rows, 0, B_rows, 6) = H_x_i; 
-/**/      std::cout << "H_x_i: " << std::endl << H_x_i << std::endl;
-/**/      std::cout << "H_x_k: " << std::endl << H_x_k << std::endl;
+//**/      std::cout << "H_x_i: " << std::endl << H_x_i << std::endl;
+//**/      std::cout << "H_x_k: " << std::endl << H_x_k << std::endl;
           H_z_i = B*J2_n(Inv(map[j_vec[i]].position), Comp(positionPredEKF, observations_BL[i_vec[i]].position))*J2_n(positionPredEKF, observations_BL[i_vec[i]].position);
           H_z_k.block(i*B_rows, i*6, B_rows, 6) = H_z_i;
-/**/      std::cout << "H_z_i: " << std::endl << H_z_i << std::endl;
-/**/      std::cout << "H_z_k: " << std::endl << H_z_k << std::endl;
+//**/      std::cout << "H_z_i: " << std::endl << H_z_i << std::endl;
+//**/      std::cout << "H_z_k: " << std::endl << H_z_k << std::endl;
 
           R_k.block(i*6, i*6, 6, 6) = R;
-/**/      std::cout << "R_k: " << std::endl << R_k << std::endl;
+//**/      std::cout << "R_k: " << std::endl << R_k << std::endl;
         }
         
         S_k = H_x_k*P*H_x_k.transpose() + H_z_k*R_k*H_z_k.transpose();
-/**/    std::cout << "S_k = H_x_k*P*H_x_k.transpose() + H_z_k*R_k*H_z_k.transpose(): " << std::endl;
-/**/    std::cout << "H_x_k*P*H_x_k.transpose(): " << std::endl << H_x_k*P*H_x_k.transpose() << std::endl;
-/**/    std::cout << "H_z_k*R_k*H_z_k.transpose(): " << std::endl << H_z_k*R_k*H_z_k.transpose() << std::endl;
-/**/    std::cout << "S_k: " << std::endl << S_k << std::endl;
+//**/    std::cout << "S_k = H_x_k*P*H_x_k.transpose() + H_z_k*R_k*H_z_k.transpose(): " << std::endl;
+//**/    std::cout << "H_x_k*P*H_x_k.transpose(): " << std::endl << H_x_k*P*H_x_k.transpose() << std::endl;
+//**/    std::cout << "H_z_k*R_k*H_z_k.transpose(): " << std::endl << H_z_k*R_k*H_z_k.transpose() << std::endl;
+//**/    std::cout << "S_k: " << std::endl << S_k << std::endl;
 
         W = P*H_x_k.transpose()*S_k.inverse();
-/**/    std::cout << "W: " << std::endl << W << std::endl;
-/**/    std::cout << "-W*h_k: " << std::endl << -W*h_k << std::endl;
+//**/    std::cout << "W = P*H_x_k.transpose()*S_k.inverse(): " << std::endl << W << std::endl;
+//**/    std::cout << "-W*h_k: " << std::endl << -W*h_k << std::endl;
         
         positionCorrEKF = vec2RPY(RPY2Vec(positionPredEKF) - W*h_k);
 
         P = (Matrix6f::Identity() - W*H_x_k)*P;
-/**/    std::cout << "P updated: " << std::endl << P << std::endl;
+//**/    std::cout << "P updated: " << std::endl << P << std::endl;
       }
       else // vertical elements found but no matches
         positionCorrEKF = positionPredEKF;
@@ -594,9 +618,13 @@ main (int argc, char** argv)
     pub_ekfStrip.publish(ekfStrip);
 
     tf::Quaternion quat_msg;
-    quat_msg.setRPY(0.0, 0.0, theta); // set a tf::Quaternion from RPY
+    if (M<2) // If there are two or more matches, rotate to correct yaw; otherwise, correct only (x,y) position according to odometry 
+      quat_msg.setRPY(0.0, 0.0, -positionCorrEKF.yaw);
+    else
+      quat_msg.setRPY(0.0, 0.0, -positionPredEKF.yaw);
+      
     tf::quaternionTFToMsg(quat_msg, poseCorrEKF.pose.pose.orientation); // set quaternion in msg from tf::Quaternion
-
+    
     std::cout << "poseCorrEKF: " << std::endl << poseCorrEKF.pose.pose << std::endl;
     pub_ekfCorr.publish(poseCorrEKF);
 
@@ -609,11 +637,7 @@ main (int argc, char** argv)
       br.sendTransform(tf::StampedTransform(tf::Transform::getIdentity(), ros::Time::now(), "ekf", "base_link")); // -------> Plug /base_link to /ekf frame
 
     if(logfile)
-    {
-      if (myfile.is_open()) // Log file
-        myfile << positionCorrEKF.x << ", " << positionCorrEKF.y << std::endl;
-      else std::cout << "Unable to open file"; // 
-    }
+      fprintf(myfile, "%f , %f\n", positionCorrEKF.x, positionCorrEKF.y);
     
     if (incOdom.header.stamp < incOdomPrev.header.stamp)// FIXME debugging -------> To be consistent with loop-playing
     {
@@ -629,6 +653,7 @@ main (int argc, char** argv)
     else
     {
       positionEKF = positionCorrEKF;
+      positionEKF.yaw = positionPredEKF.yaw; //FIXME
       incOdomPrev = incOdom;
       thetaPrev = theta;
     }

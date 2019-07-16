@@ -1,7 +1,11 @@
 velodyne_caja_y_pelota*
 Validacion/
 frames.gv
-logFile.txt
+*.txt
+mapgeneric.csv
+signs.csv
+test/
+MATLAB_code/
 
 src/lcm_to_ros/*.py[cod]
 src/lcm_to_ros/*~

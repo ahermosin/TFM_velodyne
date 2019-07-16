@@ -13,15 +13,16 @@
 #include <visualization_msgs/Marker.h>
 #include <lcm_to_ros/can_coche_direccion.h>
 #include <lcm_to_ros/can_coche_velocidad.h>
+#include <lcm_to_ros/gps_data.h>
 #include <customFunctions.h>
 #include <pcl_segment/positionRPY.h>
 
 #include <iostream>
 #include <fstream>
 
-std::ofstream myfile ("/home/alberto/workspaces/workspace14diciembre/logOdom.txt");
 float_t vel;
 float_t dir, turnRate, angleOffset;
+
 
 void callback_vel(const lcm_to_ros::can_coche_velocidad input_vel)
 {
@@ -53,6 +54,10 @@ main (int argc, char** argv)
   ros::Time initTime = ros::Time::now();
   ros::Time currentTime;
   
+  float easting_ref, northing_ref;
+  ros::param::get("easting_ref", easting_ref);
+  ros::param::get("northing_ref", northing_ref);
+  
   pcl_segment::positionRPY zeroRPY;
   pcl_segment::positionRPY odomRPY;
   pcl_segment::positionRPY odomPrevRPY;
@@ -65,8 +70,16 @@ main (int argc, char** argv)
   zeroRPY.pitch = 0.0;
   zeroRPY.yaw = 0.0;
   
-  odomRPY = zeroRPY;
-  odomPrevRPY = zeroRPY;
+//  odomRPY = zeroRPY;
+//  odomPrevRPY = zeroRPY;
+  ros::param::get("x_init", odomRPY.x);
+  ros::param::get("y_init", odomRPY.y);
+  ros::param::get("z_init", odomRPY.z);
+  ros::param::get("roll_init", odomRPY.roll);
+  ros::param::get("pitch_init", odomRPY.pitch);
+  ros::param::get("yaw_init", odomRPY.yaw);
+  odomRPY.yaw = odomRPY.yaw*3.141592/180.0;
+  odomPrevRPY = odomRPY;
   incOdomRPY = zeroRPY;
   
   geometry_msgs::PoseStamped poseZero;
@@ -100,8 +113,9 @@ main (int argc, char** argv)
   
   float dT = 1.0/loopRate;
   double theta, thetaPrev;
+  ros::param::get("yaw_init", thetaPrev);
+  thetaPrev = thetaPrev*3.141592/180.0;
   float_t wheelsL;
-  thetaPrev = 0.0;
   vel = 0.0;
   dir = 0.0;
   
@@ -112,66 +126,51 @@ main (int argc, char** argv)
   tf::Quaternion q;
   tf::TransformBroadcaster br;
   tf::StampedTransform transform_odom(tf::Transform::getIdentity(), initTime, "map", "odom"); // Initialization;
+  
+  ros::param::get("wheelsL", wheelsL); // debugging
+  ros::param::get("tfEKF", tfEKF); // debugging
+  ros::param::get("logfile", logfile); // debugging
+  FILE * myfile;
+  if(logfile)
+    myfile = fopen ("/home/alberto/workspaces/workspace14diciembre/logOdom.txt", "w");
+  
   tf::StampedTransform transform_odomPrev(tf::Transform::getIdentity(), initTime, "map", "odom"); // Initialization
   
   while (ros::ok())
   {
-//    ros::spinOnce();
     if(reset) // FIXME debugging
     {
-      std::cout << poseOdomPrev << std::endl;
-      std::cout << poseOdom << std::endl;      
-      std::cout << theta << std::endl;
-      std::cout << thetaPrev << std::endl;
-      std::cout << vel << std::endl;
-      std::cout << dir << std::endl;
       vel = 0.0;
       dir = 0.0; // --------------------------------> Avoid residual messages from previous replay
     }
+    std::cout << "dir (degrees): " << dir*180.0/3.141592 << std::endl;
+    std::cout << "vel: " << vel << std::endl;
+    std::cout << "thetaPrev (degrees): " << thetaPrev*180.0/3.141592 << std::endl;
+    theta = thetaPrev - vel*dT/wheelsL*tan(dir); // ----------------------------------------------> Ackermann's model: (heading angle)
+    std::cout << "theta (degrees): " << theta*180.0/3.141592 << std::endl;
     
-    ros::param::get("wheelsL", wheelsL); // debugging
-    ros::param::get("tfEKF", tfEKF); // debugging
-    ros::param::get("logfile", logfile); // debugging
-    
-    currentTime = ros::Time::now();
-    
-    theta = thetaPrev + vel*dT/wheelsL*tan(dir); // ----------------------------------------------> Ackermann's model: (heading angle)
-    
-    incOdomRPY.x = vel*dT*cos(theta);
-    incOdomRPY.y = vel*dT*sin(theta);
+    incOdomRPY.x = vel*dT*cos(theta - thetaPrev);
+    std::cout << "incOdomRPY.x: " << incOdomRPY.x << std::endl;
+    incOdomRPY.y = vel*dT*sin(theta - thetaPrev);
+    std::cout << "incOdomRPY.y: " << incOdomRPY.y << std::endl;
     incOdomRPY.z = 0.0;
-    incOdomRPY.yaw = theta;
+    incOdomRPY.yaw = -vel*dT/wheelsL*tan(dir);
     
+    std::cout << "odomPrevRPY: " << std::endl << odomPrevRPY << std::endl;
+    std::cout << "incOdomRPY: " << std::endl << incOdomRPY << std::endl;
+
     odomRPY = Comp(odomPrevRPY, incOdomRPY);
     
-    incOdom.pose.position.x = vel*dT*cos(theta);
-    incOdom.pose.position.y = vel*dT*sin(theta);
-    incOdom.pose.position.z = 0.0;
-    q.setRPY(0.0, 0.0, vel*dT/wheelsL*tan(dir));
-    tf::quaternionTFToMsg(q, incOdom.pose.orientation);
-    incOdom.header.stamp = ros::Time::now();
-
-    pub_incOdom.publish(incOdom); // --------------------> Difference between poseOdomPrev and poseOdom. Should be around /map frame
+    std::cout << "odomRPY: " << std::endl << odomRPY << std::endl;
+ 
+    q.setRPY(0.0, 0.0, -theta);
     
-    q.setRPY(0.0, 0.0, theta);                                                                                         // conversion RPY to Quaternion
-    tf::quaternionTFToMsg(q, poseOdom.pose.orientation);                                                               // conversion RPY to Quaternion
-    poseOdom.pose.position.x = poseOdomPrev.pose.position.x + vel*dT*cos(theta); // -------------->                       Ackermann's model (x position)
-    poseOdom.pose.position.y = poseOdomPrev.pose.position.y + vel*dT*sin(theta); // -------------->                       Ackermann's model (y position)
-    poseOdom.pose.position.z = poseOdomPrev.pose.position.z + 0.0; // ---------------------------->                       Ackermann's model (z position) -> ignoring
-    poseOdom.header.stamp = ros::Time::now();
-    
-    poseOdom.pose.position.x = odomRPY.x;
-    poseOdom.pose.position.y = odomRPY.y;
-    poseOdom.pose.position.z = odomRPY.z;
-    
-    pub_poseOdom.publish(poseOdom);
-    
-    transform_odom.setOrigin(tf::Vector3(poseOdom.pose.position.x, poseOdom.pose.position.y, 0.0));
+    transform_odom.setOrigin(tf::Vector3(odomRPY.x, odomRPY.y, 0.0));
     transform_odom.setRotation(q);
     
-    odomPoint.x = poseOdom.pose.position.x;
-    odomPoint.y = poseOdom.pose.position.y;
-    odomPoint.z = poseOdom.pose.position.z;
+    odomPoint.x = odomRPY.x;
+    odomPoint.y = odomRPY.y;
+    odomPoint.z = odomRPY.z;
     odomStrip.points.push_back(odomPoint);
     pub_odomStrip.publish(odomStrip);
     
@@ -181,12 +180,8 @@ main (int argc, char** argv)
       br.sendTransform(tf::StampedTransform(tf::Transform::getIdentity(), ros::Time::now(), "odom", "base_link")); // -------> Plug /base_link to /odom frame (Identity Transform)
     
     
-    if(logfile)                                                                                                                                                                     //
-    {                                                                                                                                                                               //
-      if (myfile.is_open()) // Log file                                                                                                                                             //
-        myfile << poseOdom.pose.position.x << ", " << poseOdom.pose.position.y << std::endl;                                                                                        //
-      else std::cout << "Unable to open file"; // ----------------------------------------------------------------------------------------------------------------------------------//
-    }
+    if(logfile)
+      fprintf(myfile, "%f , %f\n", odomRPY.x, odomRPY.y);
     
     if(poseOdom.header.stamp < poseOdomPrev.header.stamp) // FIXME debugging -------> To be consistent with loop-playing
     {

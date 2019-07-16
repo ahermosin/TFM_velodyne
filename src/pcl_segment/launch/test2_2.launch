@@ -1,0 +1,24 @@
+<launch>
+  <node type="rviz" name="rviz" pkg="rviz" args="-d /home/alberto/workspaces/workspace14diciembre/TFM.rviz" />
+  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="1.35 -0.51 0 -0.15 0 0 base_link velodyne_i 100" />
+  <node pkg="tf" type="static_transform_publisher" name="link2_broadcaster" args="1.25 0.51 0 0 0 0 base_link velodyne_d 100" />
+  <rosparam command="load" file="params2.yaml" />
+  <param name="test" value="5" />
+  <param name="tfEKF" value="$(arg tfEKF)" />
+  <param name="logfile" value="$(arg logfile)" />
+  <node pkg="pcl_segment" type="odom2" name="odom2" output="screen"/>
+  <rosparam param="x_init">-75.4572185430443</rosparam>
+  <rosparam param="y_init">-6.60488692577928</rosparam>
+  <rosparam param="z_init">0</rosparam>
+  <rosparam param="roll_init">0</rosparam>
+  <rosparam param="pitch_init">0</rosparam>
+  <rosparam param="yaw_init">5.5850</rosparam>  
+  <node pkg="pcl_segment" type="GPSLogger" name="GPSLogger" />
+  <node pkg="pcl_segment" type="pointcloud_merge2" name="pointcloud_merge2"/>
+  <node pkg="pcl_segment" type="euclidean_clustering" name="euclidean_clustering"/>
+  <group if="$(arg tfEKF)">
+    <!-- stuff that will only be evaluated if foo is true -->
+    <node pkg="pcl_segment" type="ekf" name="ekf" output="screen"/>
+  </group>
+  <node pkg="rosbag" type="play" name="player" args="/home/alberto/workspaces/workspace14diciembre/Validacion/nivel2prueba2.bag"/>
+</launch>
