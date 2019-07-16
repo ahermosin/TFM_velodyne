@@ -1,6 +1,7 @@
 frames.gv
 mapgeneric.csv
 signs.csv
+*.txt
 velodyne_caja_y_pelota*
 Validacion/
 test/
